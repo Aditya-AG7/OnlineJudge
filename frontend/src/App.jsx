@@ -1,13 +1,26 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { AuthCard } from './components/AuthCard';
-import { Dashboard } from './components/Dashboard';
+import { ProblemsetDashboard } from './components/ProblemsetDashboard';
+import { AdminUserManagement } from './components/AdminUserManagement';
 import { Code2 } from 'lucide-react';
 import './index.css';
 
 const MainContent = () => {
-  const { isAuthenticated, loading } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
+  const [activeView, setActiveView] = useState('problemset'); // 'problemset' | 'admin'
+
+  // Update default view whenever user logs in or role changes
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.type === 'admin') {
+        setActiveView('admin'); // Admin logs in -> directly redirect to Admin User Management
+      } else {
+        setActiveView('problemset'); // Standard user -> LeetCode-style Problemset
+      }
+    }
+  }, [isAuthenticated, user?.type]);
 
   if (loading) {
     return (
@@ -29,10 +42,16 @@ const MainContent = () => {
       </div>
 
       {/* Top Navbar */}
-      <Navbar />
+      <Navbar activeView={activeView} setActiveView={setActiveView} />
 
-      {/* Main View switching between Auth Form and Dashboard */}
-      {isAuthenticated ? <Dashboard /> : <AuthCard />}
+      {/* Main View Switching */}
+      {!isAuthenticated ? (
+        <AuthCard />
+      ) : activeView === 'admin' && user?.type === 'admin' ? (
+        <AdminUserManagement />
+      ) : (
+        <ProblemsetDashboard />
+      )}
     </div>
   );
 };

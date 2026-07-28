@@ -10,6 +10,7 @@ export default defineConfig({
       '/register': 'http://localhost:5000',
       '/login': 'http://localhost:5000',
       '/profile': 'http://localhost:5000',
+      '/admin': 'http://localhost:5000',
     },
   },
 })

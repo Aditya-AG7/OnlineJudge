@@ -67,3 +67,26 @@ export const authAPI = {
     });
   },
 };
+
+export const adminAPI = {
+  /**
+   * Fetch all registered users (Admin only)
+   */
+  async getUsers() {
+    return request('/admin/users', {
+      method: 'GET',
+    });
+  },
+
+  /**
+   * Update a user's role (Admin only)
+   * @param {string} userId 
+   * @param {string} role ('user' | 'problem_setter' | 'admin')
+   */
+  async updateUserRole(userId, role) {
+    return request(`/admin/users/${userId}/role`, {
+      method: 'PATCH',
+      body: JSON.stringify({ type: role }),
+    });
+  },
+};
