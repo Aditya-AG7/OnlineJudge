@@ -12,12 +12,8 @@ async function register(req, res) {
     if (!full_name || !username || !email || !password) {
       return res.status(400).json({ error: 'full_name, username, email, and password are all required' });
     }
-
-    // Never let a client register themselves as admin. Only allow 'user' or
-    // 'problem_setter' at signup; admin promotion should happen separately
-    // (e.g. an existing admin promoting someone via the admin panel).
-    const allowedSignupTypes = ['user', 'problem_setter'];
-    const userType = allowedSignupTypes.includes(type) ? type : 'user';
+    
+    const userType = 'user';
 
     const existing = await User.findOne({ $or: [{ username }, { email }] });
     if (existing) {

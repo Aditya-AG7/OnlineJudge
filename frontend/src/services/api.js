@@ -90,3 +90,23 @@ export const adminAPI = {
     });
   },
 };
+
+export const problemAPI = {
+  /**
+   * Fetch all non-deleted problems (GET /problems)
+   */
+  async getProblems() {
+    return request('/problems', {
+      method: 'GET',
+    });
+  },
+
+  /**
+   * Fetch problem by ID with sample test cases (GET /problems/:id)
+   */
+  async getProblemById(id) {
+    return request(`/problems/${id}`, {
+      method: 'GET',
+    });
+  },
+};

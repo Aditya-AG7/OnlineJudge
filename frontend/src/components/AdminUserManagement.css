@@ -133,7 +133,44 @@
   color: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  margin-top: 0.2rem;
+}
+
+/* Sub-Tabs Bar */
+.admin-subtabs-bar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  background-color: var(--bg-card-solid);
+  padding: 0.3rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  width: fit-content;
+}
+
+.admin-subtab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.15rem;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.admin-subtab:hover {
+  color: var(--color-white);
+}
+
+.admin-subtab.active {
+  background-color: var(--color-red-subtle);
+  color: var(--color-white);
+  border: 1px solid var(--color-red-border);
 }
 
 /* Toolbar */

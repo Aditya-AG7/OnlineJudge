@@ -1,38 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { AuthCard } from './components/AuthCard';
+import { DashboardTiles } from './components/DashboardTiles';
 import { ProblemsetDashboard } from './components/ProblemsetDashboard';
+import { ProblemDetail } from './components/ProblemDetail';
 import { AdminUserManagement } from './components/AdminUserManagement';
-import { Code2 } from 'lucide-react';
+import { Dashboard as UserProfile } from './components/Dashboard';
+import { ProtectedRoute, GuestRoute, AdminRoute } from './components/Guards';
 import './index.css';
 
-const MainContent = () => {
-  const { user, isAuthenticated, loading } = useAuth();
-  const [activeView, setActiveView] = useState('problemset'); // 'problemset' | 'admin'
-
-  // Update default view whenever user logs in or role changes
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      if (user.type === 'admin') {
-        setActiveView('admin'); // Admin logs in -> directly redirect to Admin User Management
-      } else {
-        setActiveView('problemset'); // Standard user -> LeetCode-style Problemset
-      }
-    }
-  }, [isAuthenticated, user?.type]);
-
-  if (loading) {
-    return (
-      <div className="auth-bg-wrapper" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-        <div style={{ textAlign: 'center', color: '#9da3ae' }}>
-          <Code2 size={40} className="brand-icon spin-icon" style={{ marginBottom: '1rem', color: '#ff3b30' }} />
-          <p style={{ fontFamily: 'var(--font-heading)', fontWeight: 600 }}>Initializing OnlineJudge...</p>
-        </div>
-      </div>
-    );
-  }
-
+const Layout = ({ children }) => {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
       {/* Background Atmosphere Effect */}
@@ -42,24 +21,68 @@ const MainContent = () => {
       </div>
 
       {/* Top Navbar */}
-      <Navbar activeView={activeView} setActiveView={setActiveView} />
+      <Navbar />
 
-      {/* Main View Switching */}
-      {!isAuthenticated ? (
-        <AuthCard />
-      ) : activeView === 'admin' && user?.type === 'admin' ? (
-        <AdminUserManagement />
-      ) : (
-        <ProblemsetDashboard />
-      )}
+      {/* Page View */}
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
+        {children}
+      </main>
     </div>
+  );
+};
+
+const DashboardHome = () => {
+  return (
+    <div style={{ padding: '2rem 1.5rem 4rem 1.5rem', flex: 1, position: 'relative', zIndex: 1 }}>
+      <DashboardTiles />
+      <ProblemsetDashboard />
+    </div>
+  );
+};
+
+const RootRedirect = () => {
+  const { isAuthenticated, loading } = useAuth();
+  if (loading) return null;
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />;
+};
+
+const AppRoutes = () => {
+  return (
+    <Layout>
+      <Routes>
+        {/* Guest Routes (/login, /register) */}
+        <Route element={<GuestRoute />}>
+          <Route path="/login" element={<AuthCard />} />
+          <Route path="/register" element={<AuthCard />} />
+        </Route>
+
+        {/* Protected Routes (/dashboard, /problems, /problems/:id, /profile) */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/dashboard" element={<DashboardHome />} />
+          <Route path="/problems" element={<ProblemsetDashboard />} />
+          <Route path="/problems/:id" element={<ProblemDetail />} />
+          <Route path="/profile" element={<UserProfile />} />
+        </Route>
+
+        {/* Admin Routes (/admin) */}
+        <Route element={<AdminRoute />}>
+          <Route path="/admin" element={<AdminUserManagement />} />
+        </Route>
+
+        {/* Root & Fallback Redirects */}
+        <Route path="/" element={<RootRedirect />} />
+        <Route path="*" element={<RootRedirect />} />
+      </Routes>
+    </Layout>
   );
 };
 
 export default function App() {
   return (
-    <AuthProvider>
-      <MainContent />
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
+    </BrowserRouter>
   );
 }

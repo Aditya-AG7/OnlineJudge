@@ -409,15 +409,101 @@
   box-shadow: 0 0 12px rgba(255, 59, 48, 0.35);
 }
 
-.empty-table-msg {
-  text-align: center;
-  padding: 3rem 1rem !important;
+.problemset-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.problemset-section-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--color-white);
+  margin-bottom: 0.25rem;
+}
+
+.problemset-section-desc {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.problem-title-link {
+  color: var(--color-white);
+  font-weight: 600;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.problem-title-link:hover {
+  color: var(--color-red);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.no-tags {
   color: var(--color-text-muted);
 }
 
-.table-footer {
-  padding: 0.85rem 1.25rem;
-  background-color: rgba(13, 13, 18, 0.5);
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
+/* State Cards */
+.state-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3.5rem 1.5rem;
+  background-color: var(--bg-card);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  margin-top: 1rem;
+}
+
+.state-title {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-white);
+  margin-top: 1rem;
+  margin-bottom: 0.35rem;
+}
+
+.state-desc {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  max-width: 420px;
+}
+
+.loading-state .spin-icon {
+  animation: spin 1s linear infinite;
+}
+
+.error-state {
+  border-color: rgba(255, 59, 48, 0.4);
+  background-color: rgba(255, 59, 48, 0.04);
+}
+
+.empty-state {
+  border-style: dashed;
 }

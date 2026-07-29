@@ -1,11 +1,20 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { LoginForm } from './LoginForm';
 import { RegisterForm } from './RegisterForm';
-import { Code2, Shield } from 'lucide-react';
+import { Code2 } from 'lucide-react';
 import './AuthCard.css';
 
 export const AuthCard = () => {
-  const [activeTab, setActiveTab] = useState('login'); // 'login' | 'register'
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const isRegisterPage = location.pathname === '/register';
+  const activeTab = isRegisterPage ? 'register' : 'login';
+
+  const handleAuthSuccess = () => {
+    navigate('/dashboard', { replace: true });
+  };
 
   return (
     <div className="auth-card-wrapper">
@@ -30,14 +39,14 @@ export const AuthCard = () => {
           <button
             type="button"
             className={`auth-tab ${activeTab === 'login' ? 'active' : ''}`}
-            onClick={() => setActiveTab('login')}
+            onClick={() => navigate('/login')}
           >
             Sign In
           </button>
           <button
             type="button"
             className={`auth-tab ${activeTab === 'register' ? 'active' : ''}`}
-            onClick={() => setActiveTab('register')}
+            onClick={() => navigate('/register')}
           >
             Register
           </button>
@@ -52,9 +61,9 @@ export const AuthCard = () => {
         {/* Dynamic Form */}
         <div className="auth-card-body">
           {activeTab === 'login' ? (
-            <LoginForm />
+            <LoginForm onSuccess={handleAuthSuccess} />
           ) : (
-            <RegisterForm onSuccess={() => {}} />
+            <RegisterForm onSuccess={handleAuthSuccess} />
           )}
         </div>
 
@@ -66,7 +75,7 @@ export const AuthCard = () => {
               <button
                 type="button"
                 className="link-btn"
-                onClick={() => setActiveTab('register')}
+                onClick={() => navigate('/register')}
               >
                 Sign Up
               </button>
@@ -77,7 +86,7 @@ export const AuthCard = () => {
               <button
                 type="button"
                 className="link-btn"
-                onClick={() => setActiveTab('login')}
+                onClick={() => navigate('/login')}
               >
                 Sign In
               </button>

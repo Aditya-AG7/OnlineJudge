@@ -1,16 +1,26 @@
 import React from 'react';
-import { Code2, LogOut, User as UserIcon, ShieldCheck, ListFilter, Users } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Code2, LogOut, User as UserIcon, ShieldCheck, ListFilter, Users, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './Navbar.css';
 
-export const Navbar = ({ activeView, setActiveView }) => {
+export const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const isAdmin = user?.type === 'admin';
+  const currentPath = location.pathname;
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <header className="navbar">
       <div className="navbar-container">
-        <div className="navbar-brand" onClick={() => setActiveView && setActiveView('problemset')} style={{ cursor: 'pointer' }}>
+        <div className="navbar-brand" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>
           <div className="brand-icon-wrapper">
             <Code2 size={22} className="brand-icon" />
           </div>
@@ -21,30 +31,43 @@ export const Navbar = ({ activeView, setActiveView }) => {
 
         {isAuthenticated && user && (
           <div className="navbar-user-section">
-            {/* View Switcher for Admins */}
-            {isAdmin && (
-              <div className="navbar-view-switcher">
+            <div className="navbar-view-switcher">
+              <button
+                type="button"
+                className={`nav-tab-btn ${currentPath === '/dashboard' ? 'active' : ''}`}
+                onClick={() => navigate('/dashboard')}
+              >
+                <LayoutDashboard size={14} />
+                <span>Dashboard</span>
+              </button>
+
+              <button
+                type="button"
+                className={`nav-tab-btn ${currentPath.startsWith('/problems') ? 'active' : ''}`}
+                onClick={() => navigate('/problems')}
+              >
+                <ListFilter size={14} />
+                <span>Problems</span>
+              </button>
+
+              {isAdmin && (
                 <button
                   type="button"
-                  className={`nav-tab-btn ${activeView === 'admin' ? 'active' : ''}`}
-                  onClick={() => setActiveView('admin')}
+                  className={`nav-tab-btn ${currentPath === '/admin' ? 'active' : ''}`}
+                  onClick={() => navigate('/admin')}
                 >
                   <Users size={14} />
                   <span>Admin Panel</span>
                 </button>
+              )}
+            </div>
 
-                <button
-                  type="button"
-                  className={`nav-tab-btn ${activeView === 'problemset' ? 'active' : ''}`}
-                  onClick={() => setActiveView('problemset')}
-                >
-                  <ListFilter size={14} />
-                  <span>Problemset</span>
-                </button>
-              </div>
-            )}
-
-            <div className="user-badge">
+            <div 
+              className="user-badge" 
+              onClick={() => navigate('/profile')} 
+              style={{ cursor: 'pointer' }} 
+              title="View Profile"
+            >
               <UserIcon size={14} className="user-badge-icon" />
               <span className="user-username">@{user.username}</span>
               <span className={`role-pill role-${user.type || 'user'}`}>
@@ -53,7 +76,7 @@ export const Navbar = ({ activeView, setActiveView }) => {
               </span>
             </div>
 
-            <button className="btn-logout" onClick={logout} title="Sign Out">
+            <button className="btn-logout" onClick={handleLogout} title="Sign Out">
               <LogOut size={16} />
               <span>Logout</span>
             </button>

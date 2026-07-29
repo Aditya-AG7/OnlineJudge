@@ -11,6 +11,7 @@ export default defineConfig({
       '/login': 'http://localhost:5000',
       '/profile': 'http://localhost:5000',
       '/admin': 'http://localhost:5000',
+      '/problems': 'http://localhost:5000',
     },
   },
 })
