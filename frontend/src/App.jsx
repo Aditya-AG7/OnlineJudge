@@ -5,7 +5,7 @@ import { Navbar } from './components/Navbar';
 import { AuthCard } from './components/AuthCard';
 import { DashboardTiles } from './components/DashboardTiles';
 import { ProblemsetDashboard } from './components/ProblemsetDashboard';
-import { ProblemDetail } from './components/ProblemDetail';
+import { ProblemPage } from './pages/ProblemPage';
 import { AdminUserManagement } from './components/AdminUserManagement';
 import { Dashboard as UserProfile } from './components/Dashboard';
 import { ProtectedRoute, GuestRoute, AdminRoute } from './components/Guards';
@@ -60,7 +60,7 @@ const AppRoutes = () => {
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<DashboardHome />} />
           <Route path="/problems" element={<ProblemsetDashboard />} />
-          <Route path="/problems/:id" element={<ProblemDetail />} />
+          <Route path="/problems/:id" element={<ProblemPage />} />
           <Route path="/profile" element={<UserProfile />} />
         </Route>
 
