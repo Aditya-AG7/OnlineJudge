@@ -5,6 +5,7 @@ const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const problemRoutes = require('./routes/problemRoutes');
 const compileRoutes = require('./routes/compileRoutes');
+const submissionRoutes = require('./routes/submissionRoutes');
 const { requireAuth, requireRole } = require('./middleware/auth');
 
 const { getAllUsers, updateUserRole } = require('./controllers/adminController');
@@ -17,6 +18,7 @@ connectDB();
 app.use('/', authRoutes);
 app.use('/', problemRoutes);
 app.use('/', compileRoutes);
+app.use('/', submissionRoutes);
 
 app.get('/profile', requireAuth, (req, res) => {
   res.json({ message: `Hello ${req.user.username}, you are logged in as ${req.user.type}` });
