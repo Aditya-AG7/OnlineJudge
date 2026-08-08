@@ -24,8 +24,14 @@ async function request(endpoint, options = {}) {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
+      if (response.status === 401) {
+        localStorage.removeItem('oj_token');
+        localStorage.removeItem('oj_user');
+      }
       const errorMsg = data.error || data.message || `Request failed with status ${response.status}`;
-      throw new Error(errorMsg);
+      const err = new Error(errorMsg);
+      err.status = response.status;
+      throw err;
     }
 
     return data;
@@ -109,4 +115,65 @@ export const problemAPI = {
       method: 'GET',
     });
   },
+
+  /**
+   * Create a new problem (POST /problems)
+   * @param {Object} problemData { title, statement, constraints, difficulty, tags, time_limit_ms, memory_limit_kb }
+   */
+  async createProblem(problemData) {
+    return request('/problems', {
+      method: 'POST',
+      body: JSON.stringify(problemData),
+    });
+  },
+
+  /**
+   * Add a testcase to a problem (POST /problems/:id/testcases)
+   * @param {string} problemId
+   * @param {Object} testCaseData { input, output, is_sample }
+   */
+  async addTestCase(problemId, testCaseData) {
+    return request(`/problems/${problemId}/testcases`, {
+      method: 'POST',
+      body: JSON.stringify(testCaseData),
+    });
+  },
 };
+
+export const compileAPI = {
+  /**
+   * Execute C++ code against input (POST /run)
+   * @param {Object} data { source_code, input }
+   */
+  async runCode(data) {
+    return request('/run', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+};
+
+export const submissionAPI = {
+  /**
+   * Submit code for problem evaluation (POST /submissions)
+   * @param {Object} data { problem_id, source_code }
+   */
+  async submitCode(data) {
+    return request('/submissions', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  /**
+   * Fetch submission by ID with results (GET /submissions/:id)
+   * @param {string} id
+   */
+  async getSubmissionById(id) {
+    return request(`/submissions/${id}`, {
+      method: 'GET',
+    });
+  },
+};
+
+

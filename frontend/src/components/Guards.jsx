@@ -56,3 +56,22 @@ export const AdminRoute = () => {
 
   return <Outlet />;
 };
+
+export const SetterOrAdminRoute = () => {
+  const { user, isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return null;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user?.type !== 'admin' && user?.type !== 'problem_setter') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <Outlet />;
+};
+

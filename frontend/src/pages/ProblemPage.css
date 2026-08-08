@@ -20,11 +20,28 @@
 .problem-page-header {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
-  padding: 0.6rem 1.25rem;
+  justify-content: space-between;
+  padding: 0.5rem 1.25rem;
   background-color: #0b0b10;
   border-bottom: 1px solid var(--border-subtle);
   z-index: 10;
+}
+
+.header-left, .header-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.header-right {
+  justify-content: flex-end;
+}
+
+.header-center-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
 }
 
 .btn-back-link {
@@ -310,7 +327,7 @@
   display: flex;
   flex-direction: column;
   position: relative;
-  min-height: 200px;
+  min-height: 180px;
 }
 
 .code-textarea-placeholder {
@@ -336,8 +353,8 @@
 }
 
 /* Custom Input Section */
-.input-section-wrapper, .output-section-wrapper {
-  padding: 0.75rem 1rem;
+.input-section-wrapper {
+  padding: 0.6rem 1rem;
   border-top: 1px solid var(--border-subtle);
   background-color: #0b0b10;
   display: flex;
@@ -367,8 +384,8 @@
   padding: 0.5rem 0.75rem;
   outline: none;
   resize: vertical;
-  min-height: 60px;
-  max-height: 120px;
+  min-height: 50px;
+  max-height: 90px;
 }
 
 .custom-input-textarea:focus {
@@ -376,27 +393,347 @@
   background-color: #181826;
 }
 
-/* Read-Only Output Display Area */
-.output-display-box {
-  width: 100%;
-  min-height: 60px;
-  max-height: 120px;
+/* Output & Submission Results Section */
+.output-section-wrapper {
+  border-top: 1px solid var(--border-subtle);
   background-color: #08080d;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  height: 220px;
+  min-height: 180px;
+}
+
+.output-tabs-header {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0.75rem;
+  background-color: #0e0e16;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.output-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  background: transparent;
+  border: none;
   border-radius: var(--radius-sm);
-  padding: 0.6rem 0.75rem;
-  font-family: 'Fira Code', 'Consolas', monospace;
-  font-size: 0.825rem;
-  color: var(--color-text-muted);
+  color: var(--color-text-secondary);
+  font-family: var(--font-heading);
+  font-size: 0.775rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.output-tab-btn:hover {
+  color: var(--color-white);
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.output-tab-btn.active {
+  color: var(--color-white);
+  background-color: var(--bg-card-solid);
+  border: 1px solid var(--border-subtle);
+}
+
+.verdict-mini-badge {
+  font-size: 0.675rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-left: 0.25rem;
+}
+
+.verdict-mini-badge.verdict-accepted {
+  background-color: rgba(46, 213, 115, 0.2);
+  color: #2ed573;
+}
+
+.verdict-mini-badge.verdict-wronganswer,
+.verdict-mini-badge.verdict-compileerror,
+.verdict-mini-badge.verdict-runtimeerror,
+.verdict-mini-badge.verdict-timelimitexceeded {
+  background-color: rgba(255, 59, 48, 0.2);
+  color: #ff3b30;
+}
+
+.output-display-container {
+  flex: 1;
+  padding: 0.75rem 1rem;
   overflow-y: auto;
 }
 
-.output-display-box.read-only {
-  user-select: text;
+.output-loading-state, .output-placeholder-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  height: 100%;
+  min-height: 120px;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
 }
 
-.output-placeholder-text {
+.run-result-view {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.run-status-header {
+  display: flex;
+  align-items: center;
+}
+
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.status-tag.status-success {
+  background-color: rgba(46, 213, 115, 0.15);
+  color: #2ed573;
+  border: 1px solid rgba(46, 213, 115, 0.3);
+}
+
+.status-tag.status-compileerror,
+.status-tag.status-runtimeerror,
+.status-tag.status-timelimitexceeded {
+  background-color: rgba(255, 59, 48, 0.15);
+  color: #ff3b30;
+  border: 1px solid rgba(255, 59, 48, 0.3);
+}
+
+.code-output-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.output-block-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.code-output-text {
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 0.825rem;
+  line-height: 1.45;
+  color: #f1f5f9;
+  background-color: #0b0b12;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.error-block .code-output-text {
+  background-color: rgba(255, 59, 48, 0.08);
+  border-color: rgba(255, 59, 48, 0.3);
+  color: #ff6b6b;
+}
+
+.text-amber {
+  color: #ffab00;
+}
+
+/* Submission Result View */
+.submission-result-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.overall-verdict-card {
+  padding: 0.85rem 1.1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+}
+
+.overall-verdict-card.verdict-accepted {
+  background-color: rgba(46, 213, 115, 0.12);
+  border-color: rgba(46, 213, 115, 0.3);
+}
+
+.overall-verdict-card.verdict-wronganswer,
+.overall-verdict-card.verdict-compileerror,
+.overall-verdict-card.verdict-runtimeerror,
+.overall-verdict-card.verdict-timelimitexceeded {
+  background-color: rgba(255, 59, 48, 0.12);
+  border-color: rgba(255, 59, 48, 0.3);
+}
+
+.verdict-icon-group {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.icon-accepted {
+  color: #2ed573;
+}
+
+.icon-rejected {
+  color: #ff3b30;
+}
+
+.verdict-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--color-white);
+  line-height: 1.2;
+}
+
+.verdict-meta {
+  font-size: 0.775rem;
+  color: var(--color-text-secondary);
+}
+
+.tc-results-heading {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.testcase-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.tc-result-item {
+  background-color: #0e0e16;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tc-result-item.passed {
+  border-left: 3px solid #2ed573;
+}
+
+.tc-result-item.failed {
+  border-left: 3px solid #ff3b30;
+}
+
+.tc-result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tc-title-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tc-num {
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: var(--color-white);
+}
+
+.sample-badge {
+  font-size: 0.675rem;
+  font-weight: 600;
+  padding: 0.1rem 0.45rem;
+  border-radius: 9999px;
+  text-transform: uppercase;
+}
+
+.sample-badge.sample {
+  background-color: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+}
+
+.sample-badge.hidden {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--color-text-muted);
+}
+
+.tc-status-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.tc-verdict-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.tc-verdict-tag.verdict-passed {
+  color: #2ed573;
+}
+
+.tc-verdict-tag.verdict-failed,
+.tc-verdict-tag.verdict-timelimitexceeded,
+.tc-verdict-tag.verdict-runtimeerror {
+  color: #ff3b30;
+}
+
+.tc-time {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+}
+
+.tc-sample-diff-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  background-color: rgba(255, 59, 48, 0.05);
+  border: 1px solid rgba(255, 59, 48, 0.2);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.65rem;
+  margin-top: 0.25rem;
+}
+
+.diff-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.diff-lbl {
+  font-size: 0.725rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.diff-val {
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 0.8rem;
+  color: #ff6b6b;
+  white-space: pre-wrap;
+}
+
+.tc-hidden-note {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
   font-style: italic;
+  margin-top: 0.1rem;
 }
 
 /* Action Bar with Run and Submit Buttons */
@@ -428,9 +765,14 @@
   transition: all var(--transition-fast);
 }
 
-.btn-run-action:hover {
+.btn-run-action:hover:not(:disabled) {
   background-color: #262636;
   border-color: rgba(255, 255, 255, 0.3);
+}
+
+.btn-run-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Submit Button - Primary / Filled Accent Style (LeetCode Green) */
@@ -452,8 +794,15 @@
   box-shadow: 0 4px 12px rgba(46, 213, 115, 0.25);
 }
 
-.btn-submit-action:hover {
+.btn-submit-action:hover:not(:disabled) {
   background-color: #26af5f;
   box-shadow: 0 6px 16px rgba(46, 213, 115, 0.35);
   transform: translateY(-1px);
+}
+
+.btn-submit-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }

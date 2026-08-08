@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Clock, HardDrive, Tag, Sparkles, 
-  AlertCircle, RefreshCw, Terminal, FileText, Code2, Play, Send 
+  AlertCircle, RefreshCw, Terminal, FileText, Code2, Play, Send,
+  CheckCircle2, XCircle, X, Check, AlertTriangle
 } from 'lucide-react';
-import { problemAPI } from '../services/api';
+import { problemAPI, compileAPI, submissionAPI } from '../services/api';
 import './ProblemPage.css';
 
 export const ProblemPage = () => {
@@ -28,6 +29,14 @@ int main() {
 
   const [customInput, setCustomInput] = useState('');
 
+  // Execution & Submission States
+  const [running, setRunning] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [activeOutputTab, setActiveOutputTab] = useState('run'); // 'run' | 'submission'
+  const [runResult, setRunResult] = useState(null);
+  const [submissionResult, setSubmissionResult] = useState(null);
+  const [apiError, setApiError] = useState(null);
+
   const fetchProblemDetails = async () => {
     setLoading(true);
     setError(null);
@@ -36,6 +45,10 @@ int main() {
       setProblem(data);
     } catch (err) {
       console.error('Failed to fetch problem details:', err);
+      if (err.status === 401) {
+        navigate('/login');
+        return;
+      }
       setError(err.message || 'Failed to load problem details');
     } finally {
       setLoading(false);
@@ -47,6 +60,66 @@ int main() {
       fetchProblemDetails();
     }
   }, [id]);
+
+  // Handler for Run button (POST /run)
+  const handleRun = async () => {
+    if (running || submitting) return;
+
+    setRunning(true);
+    setApiError(null);
+    setActiveOutputTab('run');
+
+    try {
+      const res = await compileAPI.runCode({
+        source_code: code,
+        input: customInput,
+      });
+      setRunResult(res);
+    } catch (err) {
+      console.error('Run error:', err);
+      if (err.status === 401) {
+        navigate('/login');
+        return;
+      }
+      setApiError(err.message || 'Execution failed due to server or network error.');
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  // Handler for Submit button (POST /submissions & GET /submissions/:id)
+  const handleSubmit = async () => {
+    if (running || submitting) return;
+
+    setSubmitting(true);
+    setApiError(null);
+    setActiveOutputTab('submission');
+
+    try {
+      // 1. Issue submission request (POST /submissions)
+      const initialRes = await submissionAPI.submitCode({
+        problem_id: id,
+        source_code: code,
+      });
+
+      // 2. Fetch full submission with populated & sanitized test cases (GET /submissions/:id)
+      if (initialRes && initialRes._id) {
+        const fullSubmission = await submissionAPI.getSubmissionById(initialRes._id);
+        setSubmissionResult(fullSubmission);
+      } else {
+        setSubmissionResult(initialRes);
+      }
+    } catch (err) {
+      console.error('Submit error:', err);
+      if (err.status === 401) {
+        navigate('/login');
+        return;
+      }
+      setApiError(err.message || 'Submission failed due to server or network error.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -80,18 +153,57 @@ int main() {
 
   return (
     <div className="problem-page-container">
-      {/* Top Bar Navigation */}
+      {/* Top Bar Navigation & Actions */}
       <div className="problem-page-header">
-        <button className="btn-back-link" onClick={() => navigate('/problems')}>
-          <ArrowLeft size={16} />
-          <span>Problem List</span>
-        </button>
-        <div className="header-problem-title">
-          <span className="title-text">{problem.title}</span>
-          <span className={`diff-tag ${difficultyClass}`}>
-            {problem.difficulty || 'Easy'}
-          </span>
+        <div className="header-left">
+          <button className="btn-back-link" onClick={() => navigate('/problems')}>
+            <ArrowLeft size={16} />
+            <span>Problem List</span>
+          </button>
         </div>
+
+        {/* Centered Run & Submit Action Buttons */}
+        <div className="header-center-actions">
+          <button 
+            className="btn-run-action" 
+            type="button"
+            onClick={handleRun}
+            disabled={running || submitting}
+          >
+            {running ? (
+              <>
+                <RefreshCw size={15} className="spin-icon" />
+                <span>Running...</span>
+              </>
+            ) : (
+              <>
+                <Play size={15} />
+                <span>Run</span>
+              </>
+            )}
+          </button>
+
+          <button 
+            className="btn-submit-action" 
+            type="button"
+            onClick={handleSubmit}
+            disabled={running || submitting}
+          >
+            {submitting ? (
+              <>
+                <RefreshCw size={15} className="spin-icon" />
+                <span>Submitting...</span>
+              </>
+            ) : (
+              <>
+                <Send size={15} />
+                <span>Submit</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        <div className="header-right" />
       </div>
 
       {/* Two-Panel Layout */}
@@ -230,29 +342,221 @@ int main() {
             />
           </div>
 
-          {/* Output Section (Read-Only Display) */}
+          {/* Output & Submission Results Section */}
           <div className="output-section-wrapper">
-            <div className="section-label">
-              <FileText size={14} />
-              <span>Output (stdout)</span>
-            </div>
-            <div className="output-display-box read-only">
-              <span className="output-placeholder-text">
-                Output will be displayed here after running or submitting your code.
-              </span>
-            </div>
-          </div>
+            
+            {/* Tab Header Controls */}
+            <div className="output-tabs-header">
+              <button
+                type="button"
+                className={`output-tab-btn ${activeOutputTab === 'run' ? 'active' : ''}`}
+                onClick={() => setActiveOutputTab('run')}
+              >
+                <Terminal size={13} />
+                <span>Run Output</span>
+              </button>
 
-          {/* Action Bar with Run and Submit Buttons */}
-          <div className="editor-actions-bar">
-            <button className="btn-run-action" type="button">
-              <Play size={15} />
-              <span>Run</span>
-            </button>
-            <button className="btn-submit-action" type="button">
-              <Send size={15} />
-              <span>Submit</span>
-            </button>
+              <button
+                type="button"
+                className={`output-tab-btn ${activeOutputTab === 'submission' ? 'active' : ''}`}
+                onClick={() => setActiveOutputTab('submission')}
+              >
+                <Send size={13} />
+                <span>Submission Results</span>
+                {submissionResult && (
+                  <span className={`verdict-mini-badge verdict-${submissionResult.status.toLowerCase()}`}>
+                    {submissionResult.status}
+                  </span>
+                )}
+              </button>
+            </div>
+
+            {/* Display Area Content */}
+            <div className="output-display-container">
+
+              {/* Network / Server Error Banner */}
+              {apiError && (
+                <div className="alert-banner error" style={{ marginBottom: '0.75rem' }}>
+                  <AlertCircle size={18} />
+                  <span>{apiError}</span>
+                </div>
+              )}
+
+              {/* TAB 1: RUN OUTPUT */}
+              {activeOutputTab === 'run' && (
+                <>
+                  {running ? (
+                    <div className="output-loading-state">
+                      <RefreshCw size={22} className="spin-icon text-red" />
+                      <span>Compiling and running code...</span>
+                    </div>
+                  ) : runResult ? (
+                    <div className="run-result-view">
+                      <div className="run-status-header">
+                        <span className={`status-tag status-${runResult.status.toLowerCase()}`}>
+                          {runResult.status === 'Success' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+                          <span>{runResult.status}</span>
+                        </span>
+                      </div>
+
+                      {runResult.status === 'CompileError' && (
+                        <div className="code-output-block error-block">
+                          <span className="output-block-label text-red">Compiler Stderr:</span>
+                          <pre className="code-output-text">{runResult.error}</pre>
+                        </div>
+                      )}
+
+                      {runResult.status === 'RuntimeError' && (
+                        <div className="code-output-block error-block">
+                          <span className="output-block-label text-red">Runtime Error:</span>
+                          <pre className="code-output-text">{runResult.error || runResult.output}</pre>
+                          {runResult.output && runResult.error && (
+                            <>
+                              <span className="output-block-label" style={{ marginTop: '0.5rem' }}>Output before crash:</span>
+                              <pre className="code-output-text">{runResult.output}</pre>
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                      {runResult.status === 'TimeLimitExceeded' && (
+                        <div className="code-output-block error-block">
+                          <span className="output-block-label text-red">Time Limit Exceeded:</span>
+                          <p className="code-output-text">Process was killed after exceeding the 5000ms execution time limit.</p>
+                        </div>
+                      )}
+
+                      {runResult.status === 'Success' && (
+                        <div className="code-output-block success-block">
+                          <span className="output-block-label">Program Output (stdout):</span>
+                          <pre className="code-output-text">{runResult.output || '(No stdout output returned)'}</pre>
+                          {runResult.stderr && (
+                            <>
+                              <span className="output-block-label text-amber" style={{ marginTop: '0.5rem' }}>Stderr:</span>
+                              <pre className="code-output-text text-amber">{runResult.stderr}</pre>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="output-placeholder-state">
+                      <span className="output-placeholder-text">
+                        Run your code against custom input to view output here.
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* TAB 2: SUBMISSION RESULTS */}
+              {activeOutputTab === 'submission' && (
+                <>
+                  {submitting ? (
+                    <div className="output-loading-state">
+                      <RefreshCw size={22} className="spin-icon text-red" />
+                      <span>Evaluating code against problem test cases...</span>
+                    </div>
+                  ) : submissionResult ? (
+                    <div className="submission-result-view">
+                      
+                      {/* Verdict Banner Card */}
+                      <div className={`overall-verdict-card verdict-${submissionResult.status.toLowerCase()}`}>
+                        <div className="verdict-icon-group">
+                          {submissionResult.status === 'Accepted' ? (
+                            <CheckCircle2 size={26} className="icon-accepted" />
+                          ) : (
+                            <XCircle size={26} className="icon-rejected" />
+                          )}
+                          <div>
+                            <h3 className="verdict-title">{submissionResult.status}</h3>
+                            <span className="verdict-meta">
+                              Max Exec Time: {submissionResult.exec_time_ms || 0} ms
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Test Case Breakdown */}
+                      {submissionResult.status === 'CompileError' ? (
+                        <div className="code-output-block error-block" style={{ marginTop: '0.75rem' }}>
+                          <span className="output-block-label text-red">Compilation Failed:</span>
+                          <p className="code-output-text">Your code failed to compile. No test cases were executed.</p>
+                        </div>
+                      ) : (
+                        <div className="testcase-results-list">
+                          <h4 className="tc-results-heading">Test Case Breakdown</h4>
+                          {submissionResult.results && submissionResult.results.length > 0 ? (
+                            submissionResult.results.map((resItem, idx) => {
+                              const isSample = resItem.testcase?.is_sample;
+                              const isPassed = resItem.verdict === 'Passed';
+
+                              return (
+                                <div key={resItem._id || idx} className={`tc-result-item ${isPassed ? 'passed' : 'failed'}`}>
+                                  <div className="tc-result-header">
+                                    <div className="tc-title-meta">
+                                      <span className="tc-num">Test Case #{idx + 1}</span>
+                                      {isSample ? (
+                                        <span className="sample-badge sample">Sample</span>
+                                      ) : (
+                                        <span className="sample-badge hidden">Hidden</span>
+                                      )}
+                                    </div>
+
+                                    <div className="tc-status-meta">
+                                      <span className={`tc-verdict-tag verdict-${resItem.verdict.toLowerCase()}`}>
+                                        {isPassed ? <Check size={12} /> : <X size={12} />}
+                                        <span>{resItem.verdict}</span>
+                                      </span>
+                                      <span className="tc-time">{resItem.exec_time_ms || 0} ms</span>
+                                    </div>
+                                  </div>
+
+                                  {/* Failed Sample Case Diff */}
+                                  {!isPassed && isSample && resItem.testcase && (
+                                    <div className="tc-sample-diff-box">
+                                      {resItem.testcase.input && (
+                                        <div className="diff-item">
+                                          <span className="diff-lbl">Input (stdin):</span>
+                                          <pre className="diff-val">{resItem.testcase.input}</pre>
+                                        </div>
+                                      )}
+                                      {resItem.testcase.output && (
+                                        <div className="diff-item">
+                                          <span className="diff-lbl">Expected Output:</span>
+                                          <pre className="diff-val">{resItem.testcase.output}</pre>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Failed Hidden Case Notice */}
+                                  {!isPassed && !isSample && (
+                                    <div className="tc-hidden-note">
+                                      <span>Input & Expected Output hidden for confidential test cases.</span>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <p className="no-cases-text">No test case details available.</p>
+                          )}
+                        </div>
+                      )}
+
+                    </div>
+                  ) : (
+                    <div className="output-placeholder-state">
+                      <span className="output-placeholder-text">
+                        Submit your code to evaluate against all test cases.
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
+
+            </div>
           </div>
 
         </div>

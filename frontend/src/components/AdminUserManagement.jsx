@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Users, ShieldAlert, ShieldCheck, UserCheck, Search, 
-  RefreshCw, CheckCircle2, AlertCircle, Sparkles, Code2, Tag, Edit, Trash2, Plus, Inbox
+  RefreshCw, CheckCircle2, AlertCircle, Sparkles, Code2, Tag, Edit, Trash2, Plus, Inbox, UserPlus, X
 } from 'lucide-react';
-import { adminAPI, problemAPI } from '../services/api';
+import { authAPI, adminAPI, problemAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import './AdminUserManagement.css';
 
 export const AdminUserManagement = () => {
+  const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState('users'); // 'users' | 'problems'
 
@@ -15,6 +17,18 @@ export const AdminUserManagement = () => {
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
+
+  // Add User Modal state
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [addUserForm, setAddUserForm] = useState({
+    full_name: '',
+    username: '',
+    email: '',
+    password: '',
+    type: 'user',
+  });
+  const [addingUser, setAddingUser] = useState(false);
+  const [addUserError, setAddUserError] = useState(null);
 
   // Problems state
   const [problems, setProblems] = useState([]);
@@ -67,6 +81,17 @@ export const AdminUserManagement = () => {
     }
   }, [activeTab]);
 
+  useEffect(() => {
+    if (showAddUserModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showAddUserModal]);
+
   const handleRoleChange = async (userId, targetRole, username) => {
     setUpdatingId(userId);
     try {
@@ -78,6 +103,44 @@ export const AdminUserManagement = () => {
       showToast(err.message || 'Failed to update user role', 'error');
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    setAddUserError(null);
+
+    if (!addUserForm.full_name || !addUserForm.username || !addUserForm.email || !addUserForm.password) {
+      setAddUserError('All fields are required.');
+      return;
+    }
+
+    setAddingUser(true);
+    try {
+      // 1. Register user via authAPI
+      const response = await authAPI.register({
+        full_name: addUserForm.full_name.trim(),
+        username: addUserForm.username.trim(),
+        email: addUserForm.email.trim(),
+        password: addUserForm.password,
+      });
+
+      const createdUser = response?.user;
+
+      // 2. If target role is not 'user', promote role via adminAPI
+      if (createdUser && createdUser.id && addUserForm.type !== 'user') {
+        await adminAPI.updateUserRole(createdUser.id, addUserForm.type);
+      }
+
+      showToast(`Successfully created user @${addUserForm.username}!`, 'success');
+      setShowAddUserModal(false);
+      setAddUserForm({ full_name: '', username: '', email: '', password: '', type: 'user' });
+      fetchUsers();
+    } catch (err) {
+      console.error('Failed to create user:', err);
+      setAddUserError(err.message || 'Failed to create user.');
+    } finally {
+      setAddingUser(false);
     }
   };
 
@@ -108,6 +171,125 @@ export const AdminUserManagement = () => {
           <div className={`toast-notification ${toast.type}`}>
             {toast.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
             <span>{toast.text}</span>
+          </div>
+        )}
+
+        {/* Add User Modal */}
+        {showAddUserModal && (
+          <div className="modal-backdrop" onClick={() => setShowAddUserModal(false)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <div className="modal-title-group">
+                  <UserPlus size={20} className="text-red" />
+                  <h2>Add New User</h2>
+                </div>
+                <button 
+                  type="button"
+                  className="btn-modal-close" 
+                  onClick={() => setShowAddUserModal(false)}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {addUserError && (
+                <div className="alert-banner error" style={{ margin: '1rem 1.5rem 0 1.5rem' }}>
+                  <AlertCircle size={18} />
+                  <span>{addUserError}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleCreateUser} className="modal-form">
+                <div className="form-group">
+                  <label className="form-label">Full Name <span className="text-red">*</span></label>
+                  <input
+                    type="text"
+                    className="form-input no-icon"
+                    placeholder="e.g. John Doe"
+                    value={addUserForm.full_name}
+                    onChange={(e) => setAddUserForm({ ...addUserForm, full_name: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Username <span className="text-red">*</span></label>
+                  <input
+                    type="text"
+                    className="form-input no-icon"
+                    placeholder="e.g. johndoe"
+                    value={addUserForm.username}
+                    onChange={(e) => setAddUserForm({ ...addUserForm, username: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Email Address <span className="text-red">*</span></label>
+                  <input
+                    type="email"
+                    className="form-input no-icon"
+                    placeholder="e.g. john@example.com"
+                    value={addUserForm.email}
+                    onChange={(e) => setAddUserForm({ ...addUserForm, email: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Password <span className="text-red">*</span></label>
+                  <input
+                    type="password"
+                    className="form-input no-icon"
+                    placeholder="••••••••"
+                    value={addUserForm.password}
+                    onChange={(e) => setAddUserForm({ ...addUserForm, password: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Role</label>
+                  <select
+                    className="form-input no-icon form-select"
+                    value={addUserForm.type}
+                    onChange={(e) => setAddUserForm({ ...addUserForm, type: e.target.value })}
+                  >
+                    <option value="user">User (Standard)</option>
+                    <option value="problem_setter">Problem Setter</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setShowAddUserModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    disabled={addingUser}
+                    style={{ width: 'auto' }}
+                  >
+                    {addingUser ? (
+                      <>
+                        <RefreshCw size={15} className="spin-icon" />
+                        <span>Creating User...</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus size={16} />
+                        <span>Create User</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
 
@@ -156,7 +338,7 @@ export const AdminUserManagement = () => {
             onClick={() => setActiveTab('problems')}
           >
             <Code2 size={16} />
-            <span>Live Problems Directory (GET /problems)</span>
+            <span>Live Problems Directory</span>
           </button>
         </div>
 
@@ -173,14 +355,38 @@ export const AdminUserManagement = () => {
             />
           </div>
 
-          <button 
-            className="btn-secondary btn-refresh" 
-            onClick={activeTab === 'users' ? fetchUsers : fetchProblems} 
-            disabled={loadingUsers || loadingProblems}
-          >
-            <RefreshCw size={16} className={(loadingUsers || loadingProblems) ? 'spin-icon' : ''} />
-            <span>Refresh</span>
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            {activeTab === 'users' ? (
+              <button 
+                type="button"
+                className="btn-primary btn-sm" 
+                onClick={() => setShowAddUserModal(true)}
+                style={{ width: 'auto', padding: '0.6rem 1.1rem' }}
+              >
+                <UserPlus size={16} />
+                <span>Add User</span>
+              </button>
+            ) : (
+              <button 
+                type="button"
+                className="btn-primary btn-sm" 
+                onClick={() => navigate('/admin/add-problem')}
+                style={{ width: 'auto', padding: '0.6rem 1.1rem' }}
+              >
+                <Plus size={16} />
+                <span>Add New Problem</span>
+              </button>
+            )}
+
+            <button 
+              className="btn-secondary btn-refresh" 
+              onClick={activeTab === 'users' ? fetchUsers : fetchProblems} 
+              disabled={loadingUsers || loadingProblems}
+            >
+              <RefreshCw size={16} className={(loadingUsers || loadingProblems) ? 'spin-icon' : ''} />
+              <span>Refresh</span>
+            </button>
+          </div>
         </div>
 
         {/* TAB 1: USERS DIRECTORY */}

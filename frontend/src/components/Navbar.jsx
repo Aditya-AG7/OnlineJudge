@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Code2, LogOut, User as UserIcon, ShieldCheck, ListFilter, Users, LayoutDashboard } from 'lucide-react';
+import { Code2, LogOut, User as UserIcon, ShieldCheck, ListFilter, Users, LayoutDashboard, Plus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './Navbar.css';
 
@@ -10,6 +10,7 @@ export const Navbar = () => {
   const navigate = useNavigate();
 
   const isAdmin = user?.type === 'admin';
+  const isSetterOrAdmin = user?.type === 'admin' || user?.type === 'problem_setter';
   const currentPath = location.pathname;
 
   const handleLogout = () => {
@@ -43,12 +44,23 @@ export const Navbar = () => {
 
               <button
                 type="button"
-                className={`nav-tab-btn ${currentPath.startsWith('/problems') ? 'active' : ''}`}
+                className={`nav-tab-btn ${currentPath.startsWith('/problems') && currentPath !== '/admin/add-problem' ? 'active' : ''}`}
                 onClick={() => navigate('/problems')}
               >
                 <ListFilter size={14} />
                 <span>Problems</span>
               </button>
+
+              {isSetterOrAdmin && (
+                <button
+                  type="button"
+                  className={`nav-tab-btn ${currentPath === '/admin/add-problem' ? 'active' : ''}`}
+                  onClick={() => navigate('/admin/add-problem')}
+                >
+                  <Plus size={14} />
+                  <span>Add Problem</span>
+                </button>
+              )}
 
               {isAdmin && (
                 <button

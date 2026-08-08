@@ -6,9 +6,10 @@ import { AuthCard } from './components/AuthCard';
 import { DashboardTiles } from './components/DashboardTiles';
 import { ProblemsetDashboard } from './components/ProblemsetDashboard';
 import { ProblemPage } from './pages/ProblemPage';
+import { AddProblemPage } from './pages/AddProblemPage';
 import { AdminUserManagement } from './components/AdminUserManagement';
 import { Dashboard as UserProfile } from './components/Dashboard';
-import { ProtectedRoute, GuestRoute, AdminRoute } from './components/Guards';
+import { ProtectedRoute, GuestRoute, AdminRoute, SetterOrAdminRoute } from './components/Guards';
 import './index.css';
 
 const Layout = ({ children }) => {
@@ -64,7 +65,10 @@ const AppRoutes = () => {
           <Route path="/profile" element={<UserProfile />} />
         </Route>
 
-        {/* Admin Routes (/admin) */}
+        {/* Admin & Setter Routes (/admin, /admin/add-problem) */}
+        <Route element={<SetterOrAdminRoute />}>
+          <Route path="/admin/add-problem" element={<AddProblemPage />} />
+        </Route>
         <Route element={<AdminRoute />}>
           <Route path="/admin" element={<AdminUserManagement />} />
         </Route>
