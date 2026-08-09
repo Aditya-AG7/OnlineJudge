@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require('cors');
 require('dotenv').config();
 
 const connectDB = require('./config/db');
@@ -11,6 +12,7 @@ const { requireAuth, requireRole } = require('./middleware/auth');
 const { getAllUsers, updateUserRole } = require('./controllers/adminController');
 
 const app = express();
+app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
 app.use(express.json());
 
 connectDB();

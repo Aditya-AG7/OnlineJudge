@@ -1,6 +1,6 @@
 // API Service Utility for Authentication Endpoints
 
-const API_BASE = ''; // Relies on Vite proxy configuration or absolute URL fallback
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/$/, '');
 
 /**
  * Common fetch wrapper with error handling and JSON parsing
@@ -19,8 +19,10 @@ async function request(endpoint, options = {}) {
     headers,
   };
 
+  const url = endpoint.startsWith('/') ? `${API_BASE}${endpoint}` : `${API_BASE}/${endpoint}`;
+
   try {
-    const response = await fetch(`${API_BASE}${endpoint}`, config);
+    const response = await fetch(url, config);
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {

@@ -70,11 +70,79 @@ int main() {
     setActiveOutputTab('run');
 
     try {
-      const res = await compileAPI.runCode({
-        source_code: code,
-        input: customInput,
-      });
-      setRunResult(res);
+      const isCustomInputProvided = customInput.trim() !== '';
+      const sampleCases = problem?.test_cases || [];
+
+      if (!isCustomInputProvided && sampleCases.length > 0) {
+        // 1. Run against all sample test cases
+        const results = await Promise.all(
+          sampleCases.map(async (tc, idx) => {
+            const res = await compileAPI.runCode({
+              source_code: code,
+              input: tc.input || '',
+            });
+            return { tc, res, idx };
+          })
+        );
+
+        // Check for CompileError in any returned result
+        const compileErr = results.find(r => r.res.status === 'CompileError');
+        if (compileErr) {
+          setRunResult({
+            mode: 'samples',
+            status: 'CompileError',
+            error: compileErr.res.error,
+          });
+        } else {
+          const parsedCases = results.map(({ tc, res, idx }) => {
+            let verdict = 'Failed';
+            let actualOutput = res.output || '';
+            let errorInfo = res.error || '';
+
+            if (res.status === 'TimeLimitExceeded') {
+              verdict = 'TimeLimitExceeded';
+              actualOutput = 'Time Limit Exceeded (5000ms)';
+            } else if (res.status === 'RuntimeError') {
+              verdict = 'RuntimeError';
+              actualOutput = res.error || res.output || 'Runtime Error';
+            } else {
+              const trimmedActual = (res.output || '').replace(/\s+$/, '');
+              const trimmedExpected = (tc.output || '').replace(/\s+$/, '');
+              if (trimmedActual === trimmedExpected) {
+                verdict = 'Passed';
+              } else {
+                verdict = 'Failed';
+              }
+            }
+
+            return {
+              caseNum: idx + 1,
+              input: tc.input || '',
+              expectedOutput: tc.output || '',
+              actualOutput: actualOutput,
+              stderr: res.stderr || '',
+              verdict,
+              error: errorInfo,
+            };
+          });
+
+          setRunResult({
+            mode: 'samples',
+            status: 'Success',
+            cases: parsedCases,
+          });
+        }
+      } else {
+        // 2. Custom input provided (or no sample test cases exist)
+        const res = await compileAPI.runCode({
+          source_code: code,
+          input: customInput,
+        });
+        setRunResult({
+          mode: 'custom',
+          ...res,
+        });
+      }
     } catch (err) {
       console.error('Run error:', err);
       if (err.status === 401) {
@@ -336,7 +404,7 @@ int main() {
               className="custom-input-textarea"
               value={customInput}
               onChange={(e) => setCustomInput(e.target.value)}
-              placeholder="Enter stdin input to test your code with..."
+              placeholder="Enter stdin input to test your code with (leave empty to run sample cases)..."
               rows={3}
               spellCheck="false"
             />
@@ -392,57 +460,142 @@ int main() {
                     </div>
                   ) : runResult ? (
                     <div className="run-result-view">
-                      <div className="run-status-header">
-                        <span className={`status-tag status-${runResult.status.toLowerCase()}`}>
-                          {runResult.status === 'Success' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
-                          <span>{runResult.status}</span>
-                        </span>
-                      </div>
+                      {/* Sample Test Cases Mode */}
+                      {runResult.mode === 'samples' ? (
+                        runResult.status === 'CompileError' ? (
+                          <div className="code-output-block error-block">
+                            <div className="run-status-header" style={{ marginBottom: '0.5rem' }}>
+                              <span className="status-tag status-compileerror">
+                                <AlertCircle size={14} />
+                                <span>Compile Error</span>
+                              </span>
+                            </div>
+                            <span className="output-block-label text-red">Compiler Stderr:</span>
+                            <pre className="code-output-text">{runResult.error}</pre>
+                          </div>
+                        ) : (
+                          <div className="sample-results-container">
+                            {(() => {
+                              const passedCount = (runResult.cases || []).filter(c => c.verdict === 'Passed').length;
+                              const totalCount = (runResult.cases || []).length;
+                              const allPassed = passedCount === totalCount && totalCount > 0;
 
-                      {runResult.status === 'CompileError' && (
-                        <div className="code-output-block error-block">
-                          <span className="output-block-label text-red">Compiler Stderr:</span>
-                          <pre className="code-output-text">{runResult.error}</pre>
-                        </div>
-                      )}
+                              return (
+                                <>
+                                  <div className="run-status-header" style={{ marginBottom: '0.75rem' }}>
+                                    <span className={`status-tag ${allPassed ? 'status-success' : 'status-compileerror'}`}>
+                                      {allPassed ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+                                      <span>{allPassed ? 'Sample Cases Passed' : `Sample Cases (${passedCount}/${totalCount} Passed)`}</span>
+                                    </span>
+                                  </div>
 
-                      {runResult.status === 'RuntimeError' && (
-                        <div className="code-output-block error-block">
-                          <span className="output-block-label text-red">Runtime Error:</span>
-                          <pre className="code-output-text">{runResult.error || runResult.output}</pre>
-                          {runResult.output && runResult.error && (
-                            <>
-                              <span className="output-block-label" style={{ marginTop: '0.5rem' }}>Output before crash:</span>
-                              <pre className="code-output-text">{runResult.output}</pre>
-                            </>
+                                  <div className="testcase-results-list">
+                                    {runResult.cases.map((c) => {
+                                      const isPassed = c.verdict === 'Passed';
+                                      return (
+                                        <div key={c.caseNum} className={`tc-result-item ${isPassed ? 'passed' : 'failed'}`}>
+                                          <div className="tc-result-header">
+                                            <div className="tc-title-meta">
+                                              <span className="tc-num">Sample Case #{c.caseNum}</span>
+                                              <span className="sample-badge sample">Sample</span>
+                                            </div>
+                                            <div className="tc-status-meta">
+                                              <span className={`tc-verdict-tag verdict-${c.verdict.toLowerCase()}`}>
+                                                {isPassed ? <Check size={12} /> : <X size={12} />}
+                                                <span>{c.verdict === 'Failed' ? 'Wrong Answer' : c.verdict}</span>
+                                              </span>
+                                            </div>
+                                          </div>
+
+                                          <div className="tc-sample-details-box">
+                                            <div className="diff-item">
+                                              <span className="diff-lbl">Input (stdin):</span>
+                                              <pre className="diff-val-code">{c.input || '(empty)'}</pre>
+                                            </div>
+                                            <div className="sample-diff-side-by-side">
+                                              <div className="diff-item">
+                                                <span className="diff-lbl">Expected Output:</span>
+                                                <pre className="diff-val-code expected">{c.expectedOutput || '(empty)'}</pre>
+                                              </div>
+                                              <div className="diff-item">
+                                                <span className="diff-lbl">Actual Output:</span>
+                                                <pre className={`diff-val-code ${isPassed ? 'actual-pass' : 'actual-fail'}`}>
+                                                  {c.actualOutput || c.error || '(No output)'}
+                                                </pre>
+                                              </div>
+                                            </div>
+                                            {c.stderr && (
+                                              <div className="diff-item" style={{ marginTop: '0.25rem' }}>
+                                                <span className="diff-lbl text-amber">Stderr:</span>
+                                                <pre className="diff-val-code text-amber">{c.stderr}</pre>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </>
+                              );
+                            })()}
+                          </div>
+                        )
+                      ) : (
+                        /* Custom Input Mode (or raw single run output) */
+                        <>
+                          <div className="run-status-header">
+                            <span className={`status-tag status-${runResult.status.toLowerCase()}`}>
+                              {runResult.status === 'Success' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+                              <span>{runResult.status}</span>
+                            </span>
+                          </div>
+
+                          {runResult.status === 'CompileError' && (
+                            <div className="code-output-block error-block">
+                              <span className="output-block-label text-red">Compiler Stderr:</span>
+                              <pre className="code-output-text">{runResult.error}</pre>
+                            </div>
                           )}
-                        </div>
-                      )}
 
-                      {runResult.status === 'TimeLimitExceeded' && (
-                        <div className="code-output-block error-block">
-                          <span className="output-block-label text-red">Time Limit Exceeded:</span>
-                          <p className="code-output-text">Process was killed after exceeding the 5000ms execution time limit.</p>
-                        </div>
-                      )}
-
-                      {runResult.status === 'Success' && (
-                        <div className="code-output-block success-block">
-                          <span className="output-block-label">Program Output (stdout):</span>
-                          <pre className="code-output-text">{runResult.output || '(No stdout output returned)'}</pre>
-                          {runResult.stderr && (
-                            <>
-                              <span className="output-block-label text-amber" style={{ marginTop: '0.5rem' }}>Stderr:</span>
-                              <pre className="code-output-text text-amber">{runResult.stderr}</pre>
-                            </>
+                          {runResult.status === 'RuntimeError' && (
+                            <div className="code-output-block error-block">
+                              <span className="output-block-label text-red">Runtime Error:</span>
+                              <pre className="code-output-text">{runResult.error || runResult.output}</pre>
+                              {runResult.output && runResult.error && (
+                                <>
+                                  <span className="output-block-label" style={{ marginTop: '0.5rem' }}>Output before crash:</span>
+                                  <pre className="code-output-text">{runResult.output}</pre>
+                                </>
+                              )}
+                            </div>
                           )}
-                        </div>
+
+                          {runResult.status === 'TimeLimitExceeded' && (
+                            <div className="code-output-block error-block">
+                              <span className="output-block-label text-red">Time Limit Exceeded:</span>
+                              <p className="code-output-text">Process was killed after exceeding the 5000ms execution time limit.</p>
+                            </div>
+                          )}
+
+                          {runResult.status === 'Success' && (
+                            <div className="code-output-block success-block">
+                              <span className="output-block-label">Program Output (stdout):</span>
+                              <pre className="code-output-text">{runResult.output || '(No stdout output returned)'}</pre>
+                              {runResult.stderr && (
+                                <>
+                                  <span className="output-block-label text-amber" style={{ marginTop: '0.5rem' }}>Stderr:</span>
+                                  <pre className="code-output-text text-amber">{runResult.stderr}</pre>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   ) : (
                     <div className="output-placeholder-state">
                       <span className="output-placeholder-text">
-                        Run your code against custom input to view output here.
+                        Run your code to view sample test case evaluation or custom input output.
                       </span>
                     </div>
                   )}
