@@ -3,10 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, Clock, HardDrive, Tag, Sparkles, 
   AlertCircle, RefreshCw, Terminal, FileText, Code2, Play, Send,
-  CheckCircle2, XCircle, X, Check, AlertTriangle
+  CheckCircle2, XCircle, X, Check, Plus, Layers
 } from 'lucide-react';
-import { problemAPI, compileAPI, submissionAPI } from '../services/api';
+import { problemAPI, compileAPI, submissionAPI, formatAPI } from '../services/api';
 import './ProblemPage.css';
+
+// Default language identifier (meant to be replaced by a real language selector later)
+const CURRENT_LANGUAGE = 'cpp';
 
 export const ProblemPage = () => {
   const { id } = useParams();
@@ -27,15 +30,107 @@ int main() {
 }`
   );
 
-  const [customInput, setCustomInput] = useState('');
-
   // Execution & Submission States
   const [running, setRunning] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [activeOutputTab, setActiveOutputTab] = useState('run'); // 'run' | 'submission'
+  const [formatting, setFormatting] = useState(false);
+  const [activeOutputTab, setActiveOutputTab] = useState('testcase'); // 'testcase' | 'run' | 'submission'
   const [runResult, setRunResult] = useState(null);
   const [submissionResult, setSubmissionResult] = useState(null);
   const [apiError, setApiError] = useState(null);
+
+  // Custom Testcases State
+  const [customTestCases, setCustomTestCases] = useState([]);
+  const [activeTestcaseTabId, setActiveTestcaseTabId] = useState(null);
+
+  // Format Code handler (POST /format)
+  const handleFormat = async () => {
+    if (formatting || running || submitting || !code) return;
+
+    setFormatting(true);
+    setApiError(null);
+
+    try {
+      const res = await formatAPI.formatCode({
+        source_code: code,
+        language: CURRENT_LANGUAGE,
+      });
+
+      if (res && res.formatted_code) {
+        setCode(res.formatted_code);
+      }
+    } catch (err) {
+      console.error('Format code error:', err);
+      if (err.status === 401) {
+        navigate('/login');
+        return;
+      }
+      setApiError(err.message || 'Failed to format code.');
+    } finally {
+      setFormatting(false);
+    }
+  };
+
+  // Tab key indentation handler for code editor
+  const handleKeyDown = (e) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const textarea = e.target;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const indent = '    '; // 4 spaces
+
+      if (e.shiftKey) {
+        // Dedent
+        const beforeStart = code.substring(0, start);
+        const lineStart = beforeStart.lastIndexOf('\n') + 1;
+        const currentLine = code.substring(lineStart, end);
+
+        if (currentLine.startsWith(indent)) {
+          const newCode = code.substring(0, lineStart) + currentLine.substring(indent.length);
+          setCode(newCode);
+          const newPos = Math.max(lineStart, start - indent.length);
+          setTimeout(() => {
+            textarea.selectionStart = textarea.selectionEnd = newPos;
+          }, 0);
+        } else if (currentLine.startsWith(' ')) {
+          const match = currentLine.match(/^ +/);
+          const spacesToRemove = match ? Math.min(match[0].length, 4) : 0;
+          if (spacesToRemove > 0) {
+            const newCode = code.substring(0, lineStart) + currentLine.substring(spacesToRemove);
+            setCode(newCode);
+            const newPos = Math.max(lineStart, start - spacesToRemove);
+            setTimeout(() => {
+              textarea.selectionStart = textarea.selectionEnd = newPos;
+            }, 0);
+          }
+        }
+      } else {
+        // Indent
+        if (start === end) {
+          const newCode = code.substring(0, start) + indent + code.substring(end);
+          setCode(newCode);
+          const newPos = start + indent.length;
+          setTimeout(() => {
+            textarea.selectionStart = textarea.selectionEnd = newPos;
+          }, 0);
+        } else {
+          const before = code.substring(0, start);
+          const lineStart = before.lastIndexOf('\n') + 1;
+          const selectedText = code.substring(lineStart, end);
+          const indentedText = selectedText.split('\n').map(line => indent + line).join('\n');
+          const newCode = code.substring(0, lineStart) + indentedText + code.substring(end);
+          setCode(newCode);
+          const newStart = start + indent.length;
+          const newEnd = end + (indentedText.length - selectedText.length);
+          setTimeout(() => {
+            textarea.selectionStart = newStart;
+            textarea.selectionEnd = newEnd;
+          }, 0);
+        }
+      }
+    }
+  };
 
   const fetchProblemDetails = async () => {
     setLoading(true);
@@ -43,6 +138,9 @@ int main() {
     try {
       const data = await problemAPI.getProblemById(id);
       setProblem(data);
+      if (data && data.test_cases && data.test_cases.length > 0) {
+        setActiveTestcaseTabId(data.test_cases[0]._id || 'sample-0');
+      }
     } catch (err) {
       console.error('Failed to fetch problem details:', err);
       if (err.status === 401) {
@@ -61,6 +159,53 @@ int main() {
     }
   }, [id]);
 
+  // Combined testcases list (sample test cases + user-added custom test cases)
+  const sampleTestCases = (problem?.test_cases || []).map((tc, idx) => ({
+    id: tc._id || `sample-${idx}`,
+    name: `Case ${idx + 1}`,
+    input: tc.input || '',
+    output: tc.output || '',
+    isSample: true,
+  }));
+
+  const formattedCustomCases = customTestCases.map((tc, idx) => ({
+    id: tc.id,
+    name: `Custom ${idx + 1}`,
+    input: tc.input || '',
+    output: null,
+    isCustom: true,
+  }));
+
+  const allTestCases = [...sampleTestCases, ...formattedCustomCases];
+
+  // Set default active tab ID if unselected
+  useEffect(() => {
+    if (!activeTestcaseTabId && allTestCases.length > 0) {
+      setActiveTestcaseTabId(allTestCases[0].id);
+    }
+  }, [allTestCases, activeTestcaseTabId]);
+
+  const handleAddCustomCase = () => {
+    const newId = `custom-${Date.now()}`;
+    const newCase = { id: newId, input: '' };
+    setCustomTestCases(prev => [...prev, newCase]);
+    setActiveTestcaseTabId(newId);
+    setActiveOutputTab('testcase');
+  };
+
+  const handleRemoveCustomCase = (caseId, e) => {
+    e.stopPropagation();
+    setCustomTestCases(prev => prev.filter(c => c.id !== caseId));
+    if (activeTestcaseTabId === caseId) {
+      const remaining = allTestCases.filter(c => c.id !== caseId);
+      setActiveTestcaseTabId(remaining[0]?.id || null);
+    }
+  };
+
+  const handleUpdateCustomCaseInput = (caseId, newInput) => {
+    setCustomTestCases(prev => prev.map(c => c.id === caseId ? { ...c, input: newInput } : c));
+  };
+
   // Handler for Run button (POST /run)
   const handleRun = async () => {
     if (running || submitting) return;
@@ -70,31 +215,36 @@ int main() {
     setActiveOutputTab('run');
 
     try {
-      const isCustomInputProvided = customInput.trim() !== '';
-      const sampleCases = problem?.test_cases || [];
-
-      if (!isCustomInputProvided && sampleCases.length > 0) {
-        // 1. Run against all sample test cases
+      if (allTestCases.length === 0) {
+        // Run with empty input if no test cases exist
+        const res = await compileAPI.runCode({
+          source_code: code,
+          input: '',
+        });
+        setRunResult({
+          mode: 'single',
+          ...res,
+        });
+      } else {
+        // Run against all sample & custom test cases
         const results = await Promise.all(
-          sampleCases.map(async (tc, idx) => {
+          allTestCases.map(async (tc) => {
             const res = await compileAPI.runCode({
               source_code: code,
               input: tc.input || '',
             });
-            return { tc, res, idx };
+            return { tc, res };
           })
         );
 
-        // Check for CompileError in any returned result
         const compileErr = results.find(r => r.res.status === 'CompileError');
         if (compileErr) {
           setRunResult({
-            mode: 'samples',
             status: 'CompileError',
             error: compileErr.res.error,
           });
         } else {
-          const parsedCases = results.map(({ tc, res, idx }) => {
+          const parsedCases = results.map(({ tc, res }) => {
             let verdict = 'Failed';
             let actualOutput = res.output || '';
             let errorInfo = res.error || '';
@@ -105,21 +255,22 @@ int main() {
             } else if (res.status === 'RuntimeError') {
               verdict = 'RuntimeError';
               actualOutput = res.error || res.output || 'Runtime Error';
-            } else {
+            } else if (tc.isSample) {
               const trimmedActual = (res.output || '').replace(/\s+$/, '');
               const trimmedExpected = (tc.output || '').replace(/\s+$/, '');
-              if (trimmedActual === trimmedExpected) {
-                verdict = 'Passed';
-              } else {
-                verdict = 'Failed';
-              }
+              verdict = trimmedActual === trimmedExpected ? 'Passed' : 'Failed';
+            } else {
+              verdict = 'Success';
             }
 
             return {
-              caseNum: idx + 1,
+              id: tc.id,
+              name: tc.name,
+              isSample: tc.isSample,
+              isCustom: tc.isCustom,
               input: tc.input || '',
               expectedOutput: tc.output || '',
-              actualOutput: actualOutput,
+              actualOutput,
               stderr: res.stderr || '',
               verdict,
               error: errorInfo,
@@ -127,21 +278,10 @@ int main() {
           });
 
           setRunResult({
-            mode: 'samples',
             status: 'Success',
             cases: parsedCases,
           });
         }
-      } else {
-        // 2. Custom input provided (or no sample test cases exist)
-        const res = await compileAPI.runCode({
-          source_code: code,
-          input: customInput,
-        });
-        setRunResult({
-          mode: 'custom',
-          ...res,
-        });
       }
     } catch (err) {
       console.error('Run error:', err);
@@ -164,13 +304,11 @@ int main() {
     setActiveOutputTab('submission');
 
     try {
-      // 1. Issue submission request (POST /submissions)
       const initialRes = await submissionAPI.submitCode({
         problem_id: id,
         source_code: code,
       });
 
-      // 2. Fetch full submission with populated & sanitized test cases (GET /submissions/:id)
       if (initialRes && initialRes._id) {
         const fullSubmission = await submissionAPI.getSubmissionById(initialRes._id);
         setSubmissionResult(fullSubmission);
@@ -218,6 +356,8 @@ int main() {
   }
 
   const difficultyClass = `diff-${(problem.difficulty || 'easy').toLowerCase()}`;
+  const currentTestcase = allTestCases.find(tc => tc.id === activeTestcaseTabId) || allTestCases[0];
+  const currentResultCase = runResult?.cases?.find(c => c.id === activeTestcaseTabId) || runResult?.cases?.[0];
 
   return (
     <div className="problem-page-container">
@@ -376,37 +516,33 @@ int main() {
           <div className="editor-header-bar">
             <div className="lang-indicator">
               <Code2 size={16} className="icon-accent" />
-              <span className="lang-name">C++ (g++)</span>
+              <span className="lang-name">C++</span>
             </div>
-            <span className="editor-status-text">Drafting Solution</span>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <button
+                type="button"
+                className="btn-format-action"
+                onClick={handleFormat}
+                disabled={formatting || running || submitting}
+                title="Format Code"
+              >
+                <span>{"{ }"}</span>
+              </button>
+              <span className="editor-status-text">Drafting Solution</span>
+            </div>
           </div>
 
           {/* Main Code Editor Area */}
           <div className="editor-area-wrapper">
-            {/* TODO: Placeholder textarea - will be replaced with Monaco or CodeMirror editor in a future task */}
             <textarea
               className="code-textarea-placeholder"
               value={code}
               onChange={(e) => setCode(e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder="// Write your code here..."
               spellCheck="false"
               wrap="off"
-            />
-          </div>
-
-          {/* Custom Input Section */}
-          <div className="input-section-wrapper">
-            <div className="section-label">
-              <Terminal size={14} />
-              <span>Custom Input (stdin)</span>
-            </div>
-            <textarea
-              className="custom-input-textarea"
-              value={customInput}
-              onChange={(e) => setCustomInput(e.target.value)}
-              placeholder="Enter stdin input to test your code with (leave empty to run sample cases)..."
-              rows={3}
-              spellCheck="false"
             />
           </div>
 
@@ -417,11 +553,20 @@ int main() {
             <div className="output-tabs-header">
               <button
                 type="button"
+                className={`output-tab-btn ${activeOutputTab === 'testcase' ? 'active' : ''}`}
+                onClick={() => setActiveOutputTab('testcase')}
+              >
+                <Layers size={13} />
+                <span>Testcase</span>
+              </button>
+
+              <button
+                type="button"
                 className={`output-tab-btn ${activeOutputTab === 'run' ? 'active' : ''}`}
                 onClick={() => setActiveOutputTab('run')}
               >
                 <Terminal size={13} />
-                <span>Run Output</span>
+                <span>Test Result</span>
               </button>
 
               <button
@@ -450,159 +595,198 @@ int main() {
                 </div>
               )}
 
-              {/* TAB 1: RUN OUTPUT */}
+              {/* TAB 1: TESTCASE MANAGEMENT */}
+              {activeOutputTab === 'testcase' && (
+                <div className="testcase-management-view">
+                  {/* Testcase Sub-Tabs Row */}
+                  <div className="tc-subtabs-row">
+                    {allTestCases.map((tc) => (
+                      <button
+                        key={tc.id}
+                        type="button"
+                        className={`tc-subtab-pill ${activeTestcaseTabId === tc.id ? 'active' : ''}`}
+                        onClick={() => setActiveTestcaseTabId(tc.id)}
+                      >
+                        <span>{tc.name}</span>
+                        {tc.isCustom && (
+                          <X 
+                            size={12} 
+                            className="tc-remove-icon"
+                            onClick={(e) => handleRemoveCustomCase(tc.id, e)} 
+                          />
+                        )}
+                      </button>
+                    ))}
+
+                    <button
+                      type="button"
+                      className="btn-add-custom-tc"
+                      onClick={handleAddCustomCase}
+                      title="Add Custom Test Case"
+                    >
+                      <Plus size={13} />
+                      <span>Add Case</span>
+                    </button>
+                  </div>
+
+                  {/* Selected Test Case Form / Detail */}
+                  {currentTestcase ? (
+                    <div className="tc-input-detail-box">
+                      <div className="diff-item">
+                        <span className="diff-lbl">Input (stdin):</span>
+                        {currentTestcase.isCustom ? (
+                          <textarea
+                            className="custom-input-textarea"
+                            value={currentTestcase.input}
+                            onChange={(e) => handleUpdateCustomCaseInput(currentTestcase.id, e.target.value)}
+                            placeholder="Enter custom stdin input here..."
+                            rows={3}
+                            spellCheck="false"
+                          />
+                        ) : (
+                          <pre className="diff-val-code">{currentTestcase.input || '(empty)'}</pre>
+                        )}
+                      </div>
+
+                      {currentTestcase.isSample && (
+                        <div className="diff-item" style={{ marginTop: '0.5rem' }}>
+                          <span className="diff-lbl">Expected Output:</span>
+                          <pre className="diff-val-code expected">{currentTestcase.output || '(empty)'}</pre>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="output-placeholder-state">
+                      <span className="output-placeholder-text">
+                        No test cases. Click "Add Case" to create a custom test case.
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 2: RUN OUTPUT / TEST RESULT */}
               {activeOutputTab === 'run' && (
                 <>
                   {running ? (
                     <div className="output-loading-state">
                       <RefreshCw size={22} className="spin-icon text-red" />
-                      <span>Compiling and running code...</span>
+                      <span>Compiling and evaluating test cases...</span>
                     </div>
                   ) : runResult ? (
                     <div className="run-result-view">
-                      {/* Sample Test Cases Mode */}
-                      {runResult.mode === 'samples' ? (
-                        runResult.status === 'CompileError' ? (
-                          <div className="code-output-block error-block">
-                            <div className="run-status-header" style={{ marginBottom: '0.5rem' }}>
-                              <span className="status-tag status-compileerror">
-                                <AlertCircle size={14} />
-                                <span>Compile Error</span>
-                              </span>
+                      {runResult.status === 'CompileError' ? (
+                        <div className="code-output-block error-block">
+                          <div className="run-status-header" style={{ marginBottom: '0.5rem' }}>
+                            <span className="status-tag status-compileerror">
+                              <AlertCircle size={14} />
+                              <span>Compile Error</span>
+                            </span>
+                          </div>
+                          <span className="output-block-label text-red">Compiler Stderr:</span>
+                          <pre className="code-output-text">{runResult.error}</pre>
+                        </div>
+                      ) : runResult.cases ? (
+                        <div className="sample-results-container">
+                          {/* Case Sub-Tabs Bar for Results */}
+                          <div className="tc-subtabs-row" style={{ marginBottom: '0.75rem' }}>
+                            {runResult.cases.map((c) => (
+                              <button
+                                key={c.id}
+                                type="button"
+                                className={`tc-subtab-pill ${activeTestcaseTabId === c.id ? 'active' : ''}`}
+                                onClick={() => setActiveTestcaseTabId(c.id)}
+                              >
+                                <span>{c.name}</span>
+                                {c.isSample && (
+                                  <span className={`mini-verdict verdict-${c.verdict.toLowerCase()}`}>
+                                    {c.verdict === 'Passed' ? 'Passed' : 'Failed'}
+                                  </span>
+                                )}
+                                {c.isCustom && (
+                                  <span className="mini-verdict verdict-output">Output</span>
+                                )}
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Selected Case Result Card */}
+                          {currentResultCase ? (
+                            <div className="tc-sample-details-box">
+                              <div className="diff-item">
+                                <span className="diff-lbl">Input (stdin):</span>
+                                <pre className="diff-val-code">{currentResultCase.input || '(empty)'}</pre>
+                              </div>
+
+                              {currentResultCase.isSample ? (
+                                <div className="sample-diff-side-by-side" style={{ marginTop: '0.5rem' }}>
+                                  <div className="diff-item">
+                                    <span className="diff-lbl">Expected Output:</span>
+                                    <pre className="diff-val-code expected">{currentResultCase.expectedOutput || '(empty)'}</pre>
+                                  </div>
+                                  <div className="diff-item">
+                                    <span className="diff-lbl">Actual Output:</span>
+                                    <pre className={`diff-val-code ${currentResultCase.verdict === 'Passed' ? 'actual-pass' : 'actual-fail'}`}>
+                                      {currentResultCase.actualOutput || currentResultCase.error || '(No output)'}
+                                    </pre>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="diff-item" style={{ marginTop: '0.5rem' }}>
+                                  <span className="diff-lbl">Program Output (stdout):</span>
+                                  <pre className="diff-val-code actual-pass">
+                                    {currentResultCase.actualOutput || currentResultCase.error || '(No output)'}
+                                  </pre>
+                                </div>
+                              )}
+
+                              {currentResultCase.stderr && (
+                                <div className="diff-item" style={{ marginTop: '0.5rem' }}>
+                                  <span className="diff-lbl text-amber">Stderr:</span>
+                                  <pre className="diff-val-code text-amber">{currentResultCase.stderr}</pre>
+                                </div>
+                              )}
                             </div>
-                            <span className="output-block-label text-red">Compiler Stderr:</span>
-                            <pre className="code-output-text">{runResult.error}</pre>
-                          </div>
-                        ) : (
-                          <div className="sample-results-container">
-                            {(() => {
-                              const passedCount = (runResult.cases || []).filter(c => c.verdict === 'Passed').length;
-                              const totalCount = (runResult.cases || []).length;
-                              const allPassed = passedCount === totalCount && totalCount > 0;
-
-                              return (
-                                <>
-                                  <div className="run-status-header" style={{ marginBottom: '0.75rem' }}>
-                                    <span className={`status-tag ${allPassed ? 'status-success' : 'status-compileerror'}`}>
-                                      {allPassed ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
-                                      <span>{allPassed ? 'Sample Cases Passed' : `Sample Cases (${passedCount}/${totalCount} Passed)`}</span>
-                                    </span>
-                                  </div>
-
-                                  <div className="testcase-results-list">
-                                    {runResult.cases.map((c) => {
-                                      const isPassed = c.verdict === 'Passed';
-                                      return (
-                                        <div key={c.caseNum} className={`tc-result-item ${isPassed ? 'passed' : 'failed'}`}>
-                                          <div className="tc-result-header">
-                                            <div className="tc-title-meta">
-                                              <span className="tc-num">Sample Case #{c.caseNum}</span>
-                                              <span className="sample-badge sample">Sample</span>
-                                            </div>
-                                            <div className="tc-status-meta">
-                                              <span className={`tc-verdict-tag verdict-${c.verdict.toLowerCase()}`}>
-                                                {isPassed ? <Check size={12} /> : <X size={12} />}
-                                                <span>{c.verdict === 'Failed' ? 'Wrong Answer' : c.verdict}</span>
-                                              </span>
-                                            </div>
-                                          </div>
-
-                                          <div className="tc-sample-details-box">
-                                            <div className="diff-item">
-                                              <span className="diff-lbl">Input (stdin):</span>
-                                              <pre className="diff-val-code">{c.input || '(empty)'}</pre>
-                                            </div>
-                                            <div className="sample-diff-side-by-side">
-                                              <div className="diff-item">
-                                                <span className="diff-lbl">Expected Output:</span>
-                                                <pre className="diff-val-code expected">{c.expectedOutput || '(empty)'}</pre>
-                                              </div>
-                                              <div className="diff-item">
-                                                <span className="diff-lbl">Actual Output:</span>
-                                                <pre className={`diff-val-code ${isPassed ? 'actual-pass' : 'actual-fail'}`}>
-                                                  {c.actualOutput || c.error || '(No output)'}
-                                                </pre>
-                                              </div>
-                                            </div>
-                                            {c.stderr && (
-                                              <div className="diff-item" style={{ marginTop: '0.25rem' }}>
-                                                <span className="diff-lbl text-amber">Stderr:</span>
-                                                <pre className="diff-val-code text-amber">{c.stderr}</pre>
-                                              </div>
-                                            )}
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                </>
-                              );
-                            })()}
-                          </div>
-                        )
+                          ) : (
+                            <div className="output-placeholder-state">
+                              <span className="output-placeholder-text">Select a case tab above to view results.</span>
+                            </div>
+                          )}
+                        </div>
                       ) : (
-                        /* Custom Input Mode (or raw single run output) */
+                        /* Single run output fallback */
                         <>
                           <div className="run-status-header">
-                            <span className={`status-tag status-${runResult.status.toLowerCase()}`}>
+                            <span className={`status-tag status-${runResult.status?.toLowerCase()}`}>
                               {runResult.status === 'Success' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
                               <span>{runResult.status}</span>
                             </span>
                           </div>
 
-                          {runResult.status === 'CompileError' && (
-                            <div className="code-output-block error-block">
-                              <span className="output-block-label text-red">Compiler Stderr:</span>
-                              <pre className="code-output-text">{runResult.error}</pre>
-                            </div>
-                          )}
-
-                          {runResult.status === 'RuntimeError' && (
-                            <div className="code-output-block error-block">
-                              <span className="output-block-label text-red">Runtime Error:</span>
-                              <pre className="code-output-text">{runResult.error || runResult.output}</pre>
-                              {runResult.output && runResult.error && (
-                                <>
-                                  <span className="output-block-label" style={{ marginTop: '0.5rem' }}>Output before crash:</span>
-                                  <pre className="code-output-text">{runResult.output}</pre>
-                                </>
-                              )}
-                            </div>
-                          )}
-
-                          {runResult.status === 'TimeLimitExceeded' && (
-                            <div className="code-output-block error-block">
-                              <span className="output-block-label text-red">Time Limit Exceeded:</span>
-                              <p className="code-output-text">Process was killed after exceeding the 5000ms execution time limit.</p>
-                            </div>
-                          )}
-
-                          {runResult.status === 'Success' && (
-                            <div className="code-output-block success-block">
-                              <span className="output-block-label">Program Output (stdout):</span>
-                              <pre className="code-output-text">{runResult.output || '(No stdout output returned)'}</pre>
-                              {runResult.stderr && (
-                                <>
-                                  <span className="output-block-label text-amber" style={{ marginTop: '0.5rem' }}>Stderr:</span>
-                                  <pre className="code-output-text text-amber">{runResult.stderr}</pre>
-                                </>
-                              )}
-                            </div>
-                          )}
+                          <div className="code-output-block success-block">
+                            <span className="output-block-label">Program Output (stdout):</span>
+                            <pre className="code-output-text">{runResult.output || '(No stdout output returned)'}</pre>
+                            {runResult.stderr && (
+                              <>
+                                <span className="output-block-label text-amber" style={{ marginTop: '0.5rem' }}>Stderr:</span>
+                                <pre className="code-output-text text-amber">{runResult.stderr}</pre>
+                              </>
+                            )}
+                          </div>
                         </>
                       )}
                     </div>
                   ) : (
                     <div className="output-placeholder-state">
                       <span className="output-placeholder-text">
-                        Run your code to view sample test case evaluation or custom input output.
+                        Click "Run" to execute your solution against test cases.
                       </span>
                     </div>
                   )}
                 </>
               )}
 
-              {/* TAB 2: SUBMISSION RESULTS */}
+              {/* TAB 3: SUBMISSION RESULTS */}
               {activeOutputTab === 'submission' && (
                 <>
                   {submitting ? (

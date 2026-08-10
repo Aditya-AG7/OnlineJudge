@@ -321,6 +321,33 @@
   color: var(--color-text-muted);
 }
 
+.btn-format-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  font-family: var(--font-heading);
+  font-size: 0.775rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-format-action:hover:not(:disabled) {
+  color: var(--color-white);
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.btn-format-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Main Editor Textarea Area */
 .editor-area-wrapper {
   flex: 1;
@@ -352,55 +379,120 @@
   background-color: #141420;
 }
 
-/* Custom Input Section */
-.input-section-wrapper {
-  padding: 0.6rem 1rem;
-  border-top: 1px solid var(--border-subtle);
-  background-color: #0b0b10;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.section-label {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.775rem;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.custom-input-textarea {
-  width: 100%;
-  background-color: #151520;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  color: #f1f5f9;
-  font-family: 'Fira Code', 'Consolas', monospace;
-  font-size: 0.825rem;
-  padding: 0.5rem 0.75rem;
-  outline: none;
-  resize: vertical;
-  min-height: 50px;
-  max-height: 90px;
-}
-
-.custom-input-textarea:focus {
-  border-color: var(--color-red-border);
-  background-color: #181826;
-}
-
 /* Output & Submission Results Section */
 .output-section-wrapper {
   border-top: 1px solid var(--border-subtle);
   background-color: #08080d;
   display: flex;
   flex-direction: column;
-  height: 220px;
-  min-height: 180px;
+  height: 260px;
+  min-height: 200px;
+}
+
+/* Custom Input & Testcase Sub-tabs */
+.tc-subtabs-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+.tc-subtab-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  font-family: var(--font-heading);
+  font-size: 0.775rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.tc-subtab-pill:hover {
+  color: var(--color-white);
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.tc-subtab-pill.active {
+  color: var(--color-white);
+  background-color: var(--bg-card-solid);
+  border-color: rgba(255, 255, 255, 0.2);
+  font-weight: 600;
+}
+
+.tc-remove-icon {
+  opacity: 0.6;
+  border-radius: 2px;
+  transition: opacity 0.15s ease;
+}
+
+.tc-remove-icon:hover {
+  opacity: 1;
+  color: #ff3b30;
+}
+
+.btn-add-custom-tc {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.55rem;
+  background-color: transparent;
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-family: var(--font-heading);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.btn-add-custom-tc:hover {
+  color: var(--color-white);
+  border-color: var(--color-red-primary);
+  background-color: rgba(255, 59, 48, 0.08);
+}
+
+.mini-verdict {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.05rem 0.35rem;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  margin-left: 0.2rem;
+}
+
+.mini-verdict.verdict-passed {
+  background-color: rgba(46, 213, 115, 0.2);
+  color: #2ed573;
+}
+
+.mini-verdict.verdict-failed {
+  background-color: rgba(255, 59, 48, 0.2);
+  color: #ff3b30;
+}
+
+.mini-verdict.verdict-output {
+  background-color: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+}
+
+.tc-input-detail-box, .tc-sample-details-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  background-color: #0b0b12;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
 }
 
 .output-tabs-header {

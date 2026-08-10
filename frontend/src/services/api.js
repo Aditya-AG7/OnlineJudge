@@ -178,4 +178,18 @@ export const submissionAPI = {
   },
 };
 
+export const formatAPI = {
+  /**
+   * Format code (POST /format)
+   * @param {Object} data { source_code, language }
+   */
+  async formatCode(data) {
+    return request('/format', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+};
+
+
 
