@@ -79,12 +79,25 @@
 
 /* Workspace 2-Panel Grid */
 .problem-workspace-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
   flex: 1;
+  height: calc(100vh - 56px);
+  width: 100%;
   overflow: hidden;
-  gap: 1px;
   background-color: var(--border-subtle);
+}
+
+/* Resizable Separator Drag Handle */
+.resize-handle-horizontal {
+  width: 6px;
+  background-color: #161622;
+  cursor: col-resize;
+  transition: background-color 0.15s ease;
+  z-index: 10;
+}
+
+.resize-handle-horizontal:hover,
+.resize-handle-horizontal[data-separator-active] {
+  background-color: var(--color-red-primary, #ff3b30);
 }
 
 /* ================= LEFT PANEL: Problem Details ================= */

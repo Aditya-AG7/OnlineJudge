@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
+  Group as PanelGroup, Panel, Separator as PanelResizeHandle 
+} from 'react-resizable-panels';
+import { 
   ArrowLeft, Clock, HardDrive, Tag, Sparkles, 
   AlertCircle, RefreshCw, Terminal, FileText, Code2, Play, Send,
   CheckCircle2, XCircle, X, Check, Plus, Layers
@@ -415,10 +418,10 @@ int main() {
       </div>
 
       {/* Two-Panel Layout */}
-      <div className="problem-workspace-grid">
+      <PanelGroup direction="horizontal" className="problem-workspace-grid">
         
         {/* ================= LEFT PANEL: Problem Details ================= */}
-        <div className="problem-left-panel">
+        <Panel defaultSize={35} minSize={20} className="problem-left-panel">
           
           {/* Header Card */}
           <div className="panel-section header-section">
@@ -507,10 +510,12 @@ int main() {
             )}
           </div>
 
-        </div>
+        </Panel>
+
+        <PanelResizeHandle className="resize-handle-horizontal" />
 
         {/* ================= RIGHT PANEL: Code Editor & Execution ================= */}
-        <div className="problem-right-panel">
+        <Panel defaultSize={65} minSize={30} className="problem-right-panel">
           
           {/* Editor Header Bar */}
           <div className="editor-header-bar">
@@ -896,9 +901,9 @@ int main() {
             </div>
           </div>
 
-        </div>
+        </Panel>
 
-      </div>
+      </PanelGroup>
     </div>
   );
 };
