@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  Group as PanelGroup, Panel, Separator as PanelResizeHandle 
+import {
+  Group, Panel, Separator
 } from 'react-resizable-panels';
-import { 
-  ArrowLeft, Clock, HardDrive, Tag, Sparkles, 
+import {
+  ArrowLeft, Clock, HardDrive, Tag, Sparkles,
   AlertCircle, RefreshCw, Terminal, FileText, Code2, Play, Send,
-  CheckCircle2, XCircle, X, Check, Plus, Layers
+  CheckCircle2, XCircle, X, Check, Plus, Layers,
+  ChevronLeft, ChevronRight, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { problemAPI, compileAPI, submissionAPI, formatAPI } from '../services/api';
 import './ProblemPage.css';
@@ -24,7 +25,7 @@ export const ProblemPage = () => {
 
   // Starter C++ code template
   const [code, setCode] = useState(
-`#include <iostream>
+    `#include <iostream>
 using namespace std;
 
 int main() {
@@ -45,6 +46,37 @@ int main() {
   // Custom Testcases State
   const [customTestCases, setCustomTestCases] = useState([]);
   const [activeTestcaseTabId, setActiveTestcaseTabId] = useState(null);
+
+  const descPanelRef = useRef(null);
+  const outputPanelRef = useRef(null);
+  const [isDescCollapsed, setIsDescCollapsed] = useState(false);
+  const [isOutputCollapsed, setIsOutputCollapsed] = useState(false);
+
+  const toggleDescPanel = () => {
+    const panel = descPanelRef.current;
+    if (panel) {
+      if (panel.isCollapsed()) {
+        panel.expand();
+        setIsDescCollapsed(false);
+      } else {
+        panel.collapse();
+        setIsDescCollapsed(true);
+      }
+    }
+  };
+
+  const toggleOutputPanel = () => {
+    const panel = outputPanelRef.current;
+    if (panel) {
+      if (panel.isCollapsed()) {
+        panel.expand();
+        setIsOutputCollapsed(false);
+      } else {
+        panel.collapse();
+        setIsOutputCollapsed(true);
+      }
+    }
+  };
 
   // Format Code handler (POST /format)
   const handleFormat = async () => {
@@ -375,8 +407,8 @@ int main() {
 
         {/* Centered Run & Submit Action Buttons */}
         <div className="header-center-actions">
-          <button 
-            className="btn-run-action" 
+          <button
+            className="btn-run-action"
             type="button"
             onClick={handleRun}
             disabled={running || submitting}
@@ -394,8 +426,8 @@ int main() {
             )}
           </button>
 
-          <button 
-            className="btn-submit-action" 
+          <button
+            className="btn-submit-action"
             type="button"
             onClick={handleSubmit}
             disabled={running || submitting}
@@ -418,492 +450,564 @@ int main() {
       </div>
 
       {/* Two-Panel Layout */}
-      <PanelGroup direction="horizontal" className="problem-workspace-grid">
-        
+      <Group orientation="horizontal" className="problem-workspace-grid">
+
         {/* ================= LEFT PANEL: Problem Details ================= */}
-        <Panel defaultSize={35} minSize={20} className="problem-left-panel">
-          
-          {/* Header Card */}
-          <div className="panel-section header-section">
-            <h1 className="problem-main-title">{problem.title}</h1>
-            
-            <div className="problem-meta-row">
-              <span className={`diff-badge ${difficultyClass}`}>
-                {problem.difficulty || 'Easy'}
-              </span>
-
-              <div className="limits-pills-group">
-                <span className="meta-pill" title="Time Limit">
-                  <Clock size={13} />
-                  <span>{problem.time_limit_ms || 2000} ms</span>
-                </span>
-                <span className="meta-pill" title="Memory Limit">
-                  <HardDrive size={13} />
-                  <span>{Math.round((problem.memory_limit_kb || 262144) / 1024)} MB</span>
-                </span>
-              </div>
+        <Panel
+          panelRef={descPanelRef}
+          defaultSize={45}
+          minSize={20}
+          collapsible={true}
+          collapsedSize={50}
+          onResize={() => {
+            if (descPanelRef.current) {
+              setIsDescCollapsed(descPanelRef.current.isCollapsed());
+            }
+          }}
+          className="problem-left-panel"
+        >
+          {isDescCollapsed ? (
+            <div className="collapsed-desc-strip">
+              <button
+                type="button"
+                className="btn-panel-toggle"
+                onClick={toggleDescPanel}
+                title="Expand Description"
+              >
+                <ChevronRight size={16} />
+              </button>
+              <span className="collapsed-desc-title">Description</span>
             </div>
+          ) : (
+            <div className="panel-content-container">
+              {/* Header Card */}
+              <div className="panel-section header-section">
+                <div className="panel-title-header-row">
+                  <h1 className="problem-main-title">{problem.title}</h1>
+                  <button
+                    type="button"
+                    className="btn-panel-toggle"
+                    onClick={toggleDescPanel}
+                    title="Collapse Description"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                </div>
 
-            {problem.tags && problem.tags.length > 0 && (
-              <div className="problem-tags-row">
-                {problem.tags.map((tag, idx) => (
-                  <span key={idx} className="problem-tag-chip">
-                    <Tag size={11} style={{ marginRight: 4 }} />
-                    {tag}
+                <div className="problem-meta-row">
+                  <span className={`diff-badge ${difficultyClass}`}>
+                    {problem.difficulty || 'Easy'}
                   </span>
-                ))}
-              </div>
-            )}
-          </div>
 
-          {/* Statement Section */}
-          <div className="panel-section">
-            <div className="section-header">
-              <FileText size={18} className="icon-accent" />
-              <h2>Problem Statement</h2>
-            </div>
-            <div className="statement-text">
-              {problem.statement}
-            </div>
-          </div>
+                  <div className="limits-pills-group">
+                    <span className="meta-pill" title="Time Limit">
+                      <Clock size={13} />
+                      <span>{problem.time_limit_ms || 2000} ms</span>
+                    </span>
+                    <span className="meta-pill" title="Memory Limit">
+                      <HardDrive size={13} />
+                      <span>{Math.round((problem.memory_limit_kb || 262144) / 1024)} MB</span>
+                    </span>
+                  </div>
+                </div>
 
-          {/* Constraints Section */}
-          {problem.constraints && (
-            <div className="panel-section">
-              <div className="section-header">
-                <Sparkles size={18} className="icon-accent" />
-                <h2>Constraints</h2>
+                {problem.tags && problem.tags.length > 0 && (
+                  <div className="problem-tags-row">
+                    {problem.tags.map((tag, idx) => (
+                      <span key={idx} className="problem-tag-chip">
+                        <Tag size={11} style={{ marginRight: 4 }} />
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
-              <pre className="constraints-block">
-                {problem.constraints}
-              </pre>
+
+              {/* Statement Section */}
+              <div className="panel-section">
+                <div className="section-header">
+                  <FileText size={18} className="icon-accent" />
+                  <h2>Problem Statement</h2>
+                </div>
+                <div className="statement-text">
+                  {problem.statement}
+                </div>
+              </div>
+
+              {/* Constraints Section */}
+              {problem.constraints && (
+                <div className="panel-section">
+                  <div className="section-header">
+                    <Sparkles size={18} className="icon-accent" />
+                    <h2>Constraints</h2>
+                  </div>
+                  <pre className="constraints-block">
+                    {problem.constraints}
+                  </pre>
+                </div>
+              )}
+
+              {/* Sample Test Cases Section */}
+              <div className="panel-section">
+                <div className="section-header">
+                  <Terminal size={18} className="icon-accent" />
+                  <h2>Sample Test Cases</h2>
+                </div>
+
+                {problem.test_cases && problem.test_cases.length > 0 ? (
+                  <div className="sample-cases-container">
+                    {problem.test_cases.map((tc, idx) => (
+                      <div key={tc._id || idx} className="sample-case-card">
+                        <div className="sample-case-title">Sample Case #{idx + 1}</div>
+                        <div className="sample-case-grid">
+                          <div className="sample-box">
+                            <span className="box-label">Input</span>
+                            <pre className="box-code">{tc.input}</pre>
+                          </div>
+                          <div className="sample-box">
+                            <span className="box-label">Output</span>
+                            <pre className="box-code">{tc.output}</pre>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="no-cases-text">No sample test cases provided.</p>
+                )}
+              </div>
             </div>
           )}
 
-          {/* Sample Test Cases Section */}
-          <div className="panel-section">
-            <div className="section-header">
-              <Terminal size={18} className="icon-accent" />
-              <h2>Sample Test Cases</h2>
-            </div>
-
-            {problem.test_cases && problem.test_cases.length > 0 ? (
-              <div className="sample-cases-container">
-                {problem.test_cases.map((tc, idx) => (
-                  <div key={tc._id || idx} className="sample-case-card">
-                    <div className="sample-case-title">Sample Case #{idx + 1}</div>
-                    <div className="sample-case-grid">
-                      <div className="sample-box">
-                        <span className="box-label">Input</span>
-                        <pre className="box-code">{tc.input}</pre>
-                      </div>
-                      <div className="sample-box">
-                        <span className="box-label">Output</span>
-                        <pre className="box-code">{tc.output}</pre>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="no-cases-text">No sample test cases provided.</p>
-            )}
-          </div>
-
         </Panel>
 
-        <PanelResizeHandle className="resize-handle-horizontal" />
+        <Separator className="resize-handle-horizontal" />
 
         {/* ================= RIGHT PANEL: Code Editor & Execution ================= */}
-        <Panel defaultSize={65} minSize={30} className="problem-right-panel">
-          
-          {/* Editor Header Bar */}
-          <div className="editor-header-bar">
-            <div className="lang-indicator">
-              <Code2 size={16} className="icon-accent" />
-              <span className="lang-name">C++</span>
-            </div>
+        <Panel defaultSize={55} minSize={30} className="problem-right-panel">
+          <Group orientation="vertical">
+            <Panel defaultSize={50} minSize={30} className="problem-code-editor">
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <button
-                type="button"
-                className="btn-format-action"
-                onClick={handleFormat}
-                disabled={formatting || running || submitting}
-                title="Format Code"
-              >
-                <span>{"{ }"}</span>
-              </button>
-              <span className="editor-status-text">Drafting Solution</span>
-            </div>
-          </div>
-
-          {/* Main Code Editor Area */}
-          <div className="editor-area-wrapper">
-            <textarea
-              className="code-textarea-placeholder"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="// Write your code here..."
-              spellCheck="false"
-              wrap="off"
-            />
-          </div>
-
-          {/* Output & Submission Results Section */}
-          <div className="output-section-wrapper">
-            
-            {/* Tab Header Controls */}
-            <div className="output-tabs-header">
-              <button
-                type="button"
-                className={`output-tab-btn ${activeOutputTab === 'testcase' ? 'active' : ''}`}
-                onClick={() => setActiveOutputTab('testcase')}
-              >
-                <Layers size={13} />
-                <span>Testcase</span>
-              </button>
-
-              <button
-                type="button"
-                className={`output-tab-btn ${activeOutputTab === 'run' ? 'active' : ''}`}
-                onClick={() => setActiveOutputTab('run')}
-              >
-                <Terminal size={13} />
-                <span>Test Result</span>
-              </button>
-
-              <button
-                type="button"
-                className={`output-tab-btn ${activeOutputTab === 'submission' ? 'active' : ''}`}
-                onClick={() => setActiveOutputTab('submission')}
-              >
-                <Send size={13} />
-                <span>Submission Results</span>
-                {submissionResult && (
-                  <span className={`verdict-mini-badge verdict-${submissionResult.status.toLowerCase()}`}>
-                    {submissionResult.status}
-                  </span>
-                )}
-              </button>
-            </div>
-
-            {/* Display Area Content */}
-            <div className="output-display-container">
-
-              {/* Network / Server Error Banner */}
-              {apiError && (
-                <div className="alert-banner error" style={{ marginBottom: '0.75rem' }}>
-                  <AlertCircle size={18} />
-                  <span>{apiError}</span>
+              {/* Editor Header Bar */}
+              <div className="editor-header-bar">
+                <div className="lang-indicator">
+                  <Code2 size={16} className="icon-accent" />
+                  <span className="lang-name">C++</span>
                 </div>
-              )}
 
-              {/* TAB 1: TESTCASE MANAGEMENT */}
-              {activeOutputTab === 'testcase' && (
-                <div className="testcase-management-view">
-                  {/* Testcase Sub-Tabs Row */}
-                  <div className="tc-subtabs-row">
-                    {allTestCases.map((tc) => (
-                      <button
-                        key={tc.id}
-                        type="button"
-                        className={`tc-subtab-pill ${activeTestcaseTabId === tc.id ? 'active' : ''}`}
-                        onClick={() => setActiveTestcaseTabId(tc.id)}
-                      >
-                        <span>{tc.name}</span>
-                        {tc.isCustom && (
-                          <X 
-                            size={12} 
-                            className="tc-remove-icon"
-                            onClick={(e) => handleRemoveCustomCase(tc.id, e)} 
-                          />
-                        )}
-                      </button>
-                    ))}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    className="btn-format-action"
+                    onClick={handleFormat}
+                    disabled={formatting || running || submitting}
+                    title="Format Code"
+                  >
+                    <span>{"{ }"}</span>
+                  </button>
+                  <span className="editor-status-text">Drafting Solution</span>
+                </div>
+              </div>
+
+              {/* Main Code Editor Area */}
+              <div className="editor-area-wrapper">
+                <textarea
+                  className="code-textarea-placeholder"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="// Write your code here..."
+                  spellCheck="false"
+                  wrap="off"
+                />
+              </div>
+            </Panel>
+
+            <Separator className="resize-handle-vertical" />
+
+            <Panel
+              panelRef={outputPanelRef}
+              defaultSize={50}
+              minSize={20}
+              collapsible={true}
+              collapsedSize={40}
+              onResize={() => {
+                if (outputPanelRef.current) {
+                  setIsOutputCollapsed(outputPanelRef.current.isCollapsed());
+                }
+              }}
+              className="problem-output-section"
+            >
+              {/* Output & Submission Results Section */}
+              <div className="output-section-wrapper">
+
+                {/* Tab Header Controls */}
+                <div className="output-tabs-header">
+                  <div className="tabs-header-left">
+                    <button
+                      type="button"
+                      className={`output-tab-btn ${activeOutputTab === 'testcase' ? 'active' : ''}`}
+                      onClick={() => setActiveOutputTab('testcase')}
+                    >
+                      <Layers size={13} />
+                      <span>Testcase</span>
+                    </button>
 
                     <button
                       type="button"
-                      className="btn-add-custom-tc"
-                      onClick={handleAddCustomCase}
-                      title="Add Custom Test Case"
+                      className={`output-tab-btn ${activeOutputTab === 'run' ? 'active' : ''}`}
+                      onClick={() => setActiveOutputTab('run')}
                     >
-                      <Plus size={13} />
-                      <span>Add Case</span>
+                      <Terminal size={13} />
+                      <span>Test Result</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`output-tab-btn ${activeOutputTab === 'submission' ? 'active' : ''}`}
+                      onClick={() => setActiveOutputTab('submission')}
+                    >
+                      <Send size={13} />
+                      <span>Submission Results</span>
+                      {submissionResult && (
+                        <span className={`verdict-mini-badge verdict-${submissionResult.status.toLowerCase()}`}>
+                          {submissionResult.status}
+                        </span>
+                      )}
                     </button>
                   </div>
 
-                  {/* Selected Test Case Form / Detail */}
-                  {currentTestcase ? (
-                    <div className="tc-input-detail-box">
-                      <div className="diff-item">
-                        <span className="diff-lbl">Input (stdin):</span>
-                        {currentTestcase.isCustom ? (
-                          <textarea
-                            className="custom-input-textarea"
-                            value={currentTestcase.input}
-                            onChange={(e) => handleUpdateCustomCaseInput(currentTestcase.id, e.target.value)}
-                            placeholder="Enter custom stdin input here..."
-                            rows={3}
-                            spellCheck="false"
-                          />
-                        ) : (
-                          <pre className="diff-val-code">{currentTestcase.input || '(empty)'}</pre>
-                        )}
-                      </div>
+                  <div className="tabs-header-right">
+                    <button
+                      type="button"
+                      className="btn-panel-toggle"
+                      onClick={toggleOutputPanel}
+                      title={isOutputCollapsed ? "Expand Output" : "Collapse Output"}
+                    >
+                      {isOutputCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
+                  </div>
+                </div>
 
-                      {currentTestcase.isSample && (
-                        <div className="diff-item" style={{ marginTop: '0.5rem' }}>
-                          <span className="diff-lbl">Expected Output:</span>
-                          <pre className="diff-val-code expected">{currentTestcase.output || '(empty)'}</pre>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="output-placeholder-state">
-                      <span className="output-placeholder-text">
-                        No test cases. Click "Add Case" to create a custom test case.
-                      </span>
+                {/* Display Area Content */}
+                {!isOutputCollapsed && (
+                  <div className="output-display-container">
+
+                  {/* Network / Server Error Banner */}
+                  {apiError && (
+                    <div className="alert-banner error" style={{ marginBottom: '0.75rem' }}>
+                      <AlertCircle size={18} />
+                      <span>{apiError}</span>
                     </div>
                   )}
-                </div>
-              )}
 
-              {/* TAB 2: RUN OUTPUT / TEST RESULT */}
-              {activeOutputTab === 'run' && (
-                <>
-                  {running ? (
-                    <div className="output-loading-state">
-                      <RefreshCw size={22} className="spin-icon text-red" />
-                      <span>Compiling and evaluating test cases...</span>
-                    </div>
-                  ) : runResult ? (
-                    <div className="run-result-view">
-                      {runResult.status === 'CompileError' ? (
-                        <div className="code-output-block error-block">
-                          <div className="run-status-header" style={{ marginBottom: '0.5rem' }}>
-                            <span className="status-tag status-compileerror">
-                              <AlertCircle size={14} />
-                              <span>Compile Error</span>
-                            </span>
-                          </div>
-                          <span className="output-block-label text-red">Compiler Stderr:</span>
-                          <pre className="code-output-text">{runResult.error}</pre>
-                        </div>
-                      ) : runResult.cases ? (
-                        <div className="sample-results-container">
-                          {/* Case Sub-Tabs Bar for Results */}
-                          <div className="tc-subtabs-row" style={{ marginBottom: '0.75rem' }}>
-                            {runResult.cases.map((c) => (
-                              <button
-                                key={c.id}
-                                type="button"
-                                className={`tc-subtab-pill ${activeTestcaseTabId === c.id ? 'active' : ''}`}
-                                onClick={() => setActiveTestcaseTabId(c.id)}
-                              >
-                                <span>{c.name}</span>
-                                {c.isSample && (
-                                  <span className={`mini-verdict verdict-${c.verdict.toLowerCase()}`}>
-                                    {c.verdict === 'Passed' ? 'Passed' : 'Failed'}
-                                  </span>
-                                )}
-                                {c.isCustom && (
-                                  <span className="mini-verdict verdict-output">Output</span>
-                                )}
-                              </button>
-                            ))}
-                          </div>
+                  {/* TAB 1: TESTCASE MANAGEMENT */}
+                  {activeOutputTab === 'testcase' && (
+                    <div className="testcase-management-view">
+                      {/* Testcase Sub-Tabs Row */}
+                      <div className="tc-subtabs-row">
+                        {allTestCases.map((tc) => (
+                          <button
+                            key={tc.id}
+                            type="button"
+                            className={`tc-subtab-pill ${activeTestcaseTabId === tc.id ? 'active' : ''}`}
+                            onClick={() => setActiveTestcaseTabId(tc.id)}
+                          >
+                            <span>{tc.name}</span>
+                            {tc.isCustom && (
+                              <X
+                                size={12}
+                                className="tc-remove-icon"
+                                onClick={(e) => handleRemoveCustomCase(tc.id, e)}
+                              />
+                            )}
+                          </button>
+                        ))}
 
-                          {/* Selected Case Result Card */}
-                          {currentResultCase ? (
-                            <div className="tc-sample-details-box">
-                              <div className="diff-item">
-                                <span className="diff-lbl">Input (stdin):</span>
-                                <pre className="diff-val-code">{currentResultCase.input || '(empty)'}</pre>
-                              </div>
+                        <button
+                          type="button"
+                          className="btn-add-custom-tc"
+                          onClick={handleAddCustomCase}
+                          title="Add Custom Test Case"
+                        >
+                          <Plus size={13} />
+                          <span>Add Case</span>
+                        </button>
+                      </div>
 
-                              {currentResultCase.isSample ? (
-                                <div className="sample-diff-side-by-side" style={{ marginTop: '0.5rem' }}>
-                                  <div className="diff-item">
-                                    <span className="diff-lbl">Expected Output:</span>
-                                    <pre className="diff-val-code expected">{currentResultCase.expectedOutput || '(empty)'}</pre>
-                                  </div>
-                                  <div className="diff-item">
-                                    <span className="diff-lbl">Actual Output:</span>
-                                    <pre className={`diff-val-code ${currentResultCase.verdict === 'Passed' ? 'actual-pass' : 'actual-fail'}`}>
-                                      {currentResultCase.actualOutput || currentResultCase.error || '(No output)'}
-                                    </pre>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="diff-item" style={{ marginTop: '0.5rem' }}>
-                                  <span className="diff-lbl">Program Output (stdout):</span>
-                                  <pre className="diff-val-code actual-pass">
-                                    {currentResultCase.actualOutput || currentResultCase.error || '(No output)'}
-                                  </pre>
-                                </div>
-                              )}
-
-                              {currentResultCase.stderr && (
-                                <div className="diff-item" style={{ marginTop: '0.5rem' }}>
-                                  <span className="diff-lbl text-amber">Stderr:</span>
-                                  <pre className="diff-val-code text-amber">{currentResultCase.stderr}</pre>
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="output-placeholder-state">
-                              <span className="output-placeholder-text">Select a case tab above to view results.</span>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        /* Single run output fallback */
-                        <>
-                          <div className="run-status-header">
-                            <span className={`status-tag status-${runResult.status?.toLowerCase()}`}>
-                              {runResult.status === 'Success' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
-                              <span>{runResult.status}</span>
-                            </span>
-                          </div>
-
-                          <div className="code-output-block success-block">
-                            <span className="output-block-label">Program Output (stdout):</span>
-                            <pre className="code-output-text">{runResult.output || '(No stdout output returned)'}</pre>
-                            {runResult.stderr && (
-                              <>
-                                <span className="output-block-label text-amber" style={{ marginTop: '0.5rem' }}>Stderr:</span>
-                                <pre className="code-output-text text-amber">{runResult.stderr}</pre>
-                              </>
+                      {/* Selected Test Case Form / Detail */}
+                      {currentTestcase ? (
+                        <div className="tc-input-detail-box">
+                          <div className="diff-item">
+                            <span className="diff-lbl">Input (stdin):</span>
+                            {currentTestcase.isCustom ? (
+                              <textarea
+                                className="custom-input-textarea"
+                                value={currentTestcase.input}
+                                onChange={(e) => handleUpdateCustomCaseInput(currentTestcase.id, e.target.value)}
+                                placeholder="Enter custom stdin input here..."
+                                rows={3}
+                                spellCheck="false"
+                              />
+                            ) : (
+                              <pre className="diff-val-code">{currentTestcase.input || '(empty)'}</pre>
                             )}
                           </div>
-                        </>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="output-placeholder-state">
-                      <span className="output-placeholder-text">
-                        Click "Run" to execute your solution against test cases.
-                      </span>
-                    </div>
-                  )}
-                </>
-              )}
 
-              {/* TAB 3: SUBMISSION RESULTS */}
-              {activeOutputTab === 'submission' && (
-                <>
-                  {submitting ? (
-                    <div className="output-loading-state">
-                      <RefreshCw size={22} className="spin-icon text-red" />
-                      <span>Evaluating code against problem test cases...</span>
-                    </div>
-                  ) : submissionResult ? (
-                    <div className="submission-result-view">
-                      
-                      {/* Verdict Banner Card */}
-                      <div className={`overall-verdict-card verdict-${submissionResult.status.toLowerCase()}`}>
-                        <div className="verdict-icon-group">
-                          {submissionResult.status === 'Accepted' ? (
-                            <CheckCircle2 size={26} className="icon-accepted" />
-                          ) : (
-                            <XCircle size={26} className="icon-rejected" />
+                          {currentTestcase.isSample && (
+                            <div className="diff-item" style={{ marginTop: '0.5rem' }}>
+                              <span className="diff-lbl">Expected Output:</span>
+                              <pre className="diff-val-code expected">{currentTestcase.output || '(empty)'}</pre>
+                            </div>
                           )}
-                          <div>
-                            <h3 className="verdict-title">{submissionResult.status}</h3>
-                            <span className="verdict-meta">
-                              Max Exec Time: {submissionResult.exec_time_ms || 0} ms
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Test Case Breakdown */}
-                      {submissionResult.status === 'CompileError' ? (
-                        <div className="code-output-block error-block" style={{ marginTop: '0.75rem' }}>
-                          <span className="output-block-label text-red">Compilation Failed:</span>
-                          <p className="code-output-text">Your code failed to compile. No test cases were executed.</p>
                         </div>
                       ) : (
-                        <div className="testcase-results-list">
-                          <h4 className="tc-results-heading">Test Case Breakdown</h4>
-                          {submissionResult.results && submissionResult.results.length > 0 ? (
-                            submissionResult.results.map((resItem, idx) => {
-                              const isSample = resItem.testcase?.is_sample;
-                              const isPassed = resItem.verdict === 'Passed';
+                        <div className="output-placeholder-state">
+                          <span className="output-placeholder-text">
+                            No test cases. Click "Add Case" to create a custom test case.
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-                              return (
-                                <div key={resItem._id || idx} className={`tc-result-item ${isPassed ? 'passed' : 'failed'}`}>
-                                  <div className="tc-result-header">
-                                    <div className="tc-title-meta">
-                                      <span className="tc-num">Test Case #{idx + 1}</span>
-                                      {isSample ? (
-                                        <span className="sample-badge sample">Sample</span>
-                                      ) : (
-                                        <span className="sample-badge hidden">Hidden</span>
-                                      )}
-                                    </div>
-
-                                    <div className="tc-status-meta">
-                                      <span className={`tc-verdict-tag verdict-${resItem.verdict.toLowerCase()}`}>
-                                        {isPassed ? <Check size={12} /> : <X size={12} />}
-                                        <span>{resItem.verdict}</span>
+                  {/* TAB 2: RUN OUTPUT / TEST RESULT */}
+                  {activeOutputTab === 'run' && (
+                    <>
+                      {running ? (
+                        <div className="output-loading-state">
+                          <RefreshCw size={22} className="spin-icon text-red" />
+                          <span>Compiling and evaluating test cases...</span>
+                        </div>
+                      ) : runResult ? (
+                        <div className="run-result-view">
+                          {runResult.status === 'CompileError' ? (
+                            <div className="code-output-block error-block">
+                              <div className="run-status-header" style={{ marginBottom: '0.5rem' }}>
+                                <span className="status-tag status-compileerror">
+                                  <AlertCircle size={14} />
+                                  <span>Compile Error</span>
+                                </span>
+                              </div>
+                              <span className="output-block-label text-red">Compiler Stderr:</span>
+                              <pre className="code-output-text">{runResult.error}</pre>
+                            </div>
+                          ) : runResult.cases ? (
+                            <div className="sample-results-container">
+                              {/* Case Sub-Tabs Bar for Results */}
+                              <div className="tc-subtabs-row" style={{ marginBottom: '0.75rem' }}>
+                                {runResult.cases.map((c) => (
+                                  <button
+                                    key={c.id}
+                                    type="button"
+                                    className={`tc-subtab-pill ${activeTestcaseTabId === c.id ? 'active' : ''}`}
+                                    onClick={() => setActiveTestcaseTabId(c.id)}
+                                  >
+                                    <span>{c.name}</span>
+                                    {c.isSample && (
+                                      <span className={`mini-verdict verdict-${c.verdict.toLowerCase()}`}>
+                                        {c.verdict === 'Passed' ? 'Passed' : 'Failed'}
                                       </span>
-                                      <span className="tc-time">{resItem.exec_time_ms || 0} ms</span>
-                                    </div>
+                                    )}
+                                    {c.isCustom && (
+                                      <span className="mini-verdict verdict-output">Output</span>
+                                    )}
+                                  </button>
+                                ))}
+                              </div>
+
+                              {/* Selected Case Result Card */}
+                              {currentResultCase ? (
+                                <div className="tc-sample-details-box">
+                                  <div className="diff-item">
+                                    <span className="diff-lbl">Input (stdin):</span>
+                                    <pre className="diff-val-code">{currentResultCase.input || '(empty)'}</pre>
                                   </div>
 
-                                  {/* Failed Sample Case Diff */}
-                                  {!isPassed && isSample && resItem.testcase && (
-                                    <div className="tc-sample-diff-box">
-                                      {resItem.testcase.input && (
-                                        <div className="diff-item">
-                                          <span className="diff-lbl">Input (stdin):</span>
-                                          <pre className="diff-val">{resItem.testcase.input}</pre>
-                                        </div>
-                                      )}
-                                      {resItem.testcase.output && (
-                                        <div className="diff-item">
-                                          <span className="diff-lbl">Expected Output:</span>
-                                          <pre className="diff-val">{resItem.testcase.output}</pre>
-                                        </div>
-                                      )}
+                                  {currentResultCase.isSample ? (
+                                    <div className="sample-diff-side-by-side" style={{ marginTop: '0.5rem' }}>
+                                      <div className="diff-item">
+                                        <span className="diff-lbl">Expected Output:</span>
+                                        <pre className="diff-val-code expected">{currentResultCase.expectedOutput || '(empty)'}</pre>
+                                      </div>
+                                      <div className="diff-item">
+                                        <span className="diff-lbl">Actual Output:</span>
+                                        <pre className={`diff-val-code ${currentResultCase.verdict === 'Passed' ? 'actual-pass' : 'actual-fail'}`}>
+                                          {currentResultCase.actualOutput || currentResultCase.error || '(No output)'}
+                                        </pre>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="diff-item" style={{ marginTop: '0.5rem' }}>
+                                      <span className="diff-lbl">Program Output (stdout):</span>
+                                      <pre className="diff-val-code actual-pass">
+                                        {currentResultCase.actualOutput || currentResultCase.error || '(No output)'}
+                                      </pre>
                                     </div>
                                   )}
 
-                                  {/* Failed Hidden Case Notice */}
-                                  {!isPassed && !isSample && (
-                                    <div className="tc-hidden-note">
-                                      <span>Input & Expected Output hidden for confidential test cases.</span>
+                                  {currentResultCase.stderr && (
+                                    <div className="diff-item" style={{ marginTop: '0.5rem' }}>
+                                      <span className="diff-lbl text-amber">Stderr:</span>
+                                      <pre className="diff-val-code text-amber">{currentResultCase.stderr}</pre>
                                     </div>
                                   )}
                                 </div>
-                              );
-                            })
+                              ) : (
+                                <div className="output-placeholder-state">
+                                  <span className="output-placeholder-text">Select a case tab above to view results.</span>
+                                </div>
+                              )}
+                            </div>
                           ) : (
-                            <p className="no-cases-text">No test case details available.</p>
+                            /* Single run output fallback */
+                            <>
+                              <div className="run-status-header">
+                                <span className={`status-tag status-${runResult.status?.toLowerCase()}`}>
+                                  {runResult.status === 'Success' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+                                  <span>{runResult.status}</span>
+                                </span>
+                              </div>
+
+                              <div className="code-output-block success-block">
+                                <span className="output-block-label">Program Output (stdout):</span>
+                                <pre className="code-output-text">{runResult.output || '(No stdout output returned)'}</pre>
+                                {runResult.stderr && (
+                                  <>
+                                    <span className="output-block-label text-amber" style={{ marginTop: '0.5rem' }}>Stderr:</span>
+                                    <pre className="code-output-text text-amber">{runResult.stderr}</pre>
+                                  </>
+                                )}
+                              </div>
+                            </>
                           )}
                         </div>
+                      ) : (
+                        <div className="output-placeholder-state">
+                          <span className="output-placeholder-text">
+                            Click "Run" to execute your solution against test cases.
+                          </span>
+                        </div>
                       )}
-
-                    </div>
-                  ) : (
-                    <div className="output-placeholder-state">
-                      <span className="output-placeholder-text">
-                        Submit your code to evaluate against all test cases.
-                      </span>
-                    </div>
+                    </>
                   )}
-                </>
+
+                  {/* TAB 3: SUBMISSION RESULTS */}
+                  {activeOutputTab === 'submission' && (
+                    <>
+                      {submitting ? (
+                        <div className="output-loading-state">
+                          <RefreshCw size={22} className="spin-icon text-red" />
+                          <span>Evaluating code against problem test cases...</span>
+                        </div>
+                      ) : submissionResult ? (
+                        <div className="submission-result-view">
+
+                          {/* Verdict Banner Card */}
+                          <div className={`overall-verdict-card verdict-${submissionResult.status.toLowerCase()}`}>
+                            <div className="verdict-icon-group">
+                              {submissionResult.status === 'Accepted' ? (
+                                <CheckCircle2 size={26} className="icon-accepted" />
+                              ) : (
+                                <XCircle size={26} className="icon-rejected" />
+                              )}
+                              <div>
+                                <h3 className="verdict-title">{submissionResult.status}</h3>
+                                <span className="verdict-meta">
+                                  Max Exec Time: {submissionResult.exec_time_ms || 0} ms
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Test Case Breakdown */}
+                          {submissionResult.status === 'CompileError' ? (
+                            <div className="code-output-block error-block" style={{ marginTop: '0.75rem' }}>
+                              <span className="output-block-label text-red">Compilation Failed:</span>
+                              <p className="code-output-text">Your code failed to compile. No test cases were executed.</p>
+                            </div>
+                          ) : (
+                            <div className="testcase-results-list">
+                              <h4 className="tc-results-heading">Test Case Breakdown</h4>
+                              {submissionResult.results && submissionResult.results.length > 0 ? (
+                                submissionResult.results.map((resItem, idx) => {
+                                  const isSample = resItem.testcase?.is_sample;
+                                  const isPassed = resItem.verdict === 'Passed';
+
+                                  return (
+                                    <div key={resItem._id || idx} className={`tc-result-item ${isPassed ? 'passed' : 'failed'}`}>
+                                      <div className="tc-result-header">
+                                        <div className="tc-title-meta">
+                                          <span className="tc-num">Test Case #{idx + 1}</span>
+                                          {isSample ? (
+                                            <span className="sample-badge sample">Sample</span>
+                                          ) : (
+                                            <span className="sample-badge hidden">Hidden</span>
+                                          )}
+                                        </div>
+
+                                        <div className="tc-status-meta">
+                                          <span className={`tc-verdict-tag verdict-${resItem.verdict.toLowerCase()}`}>
+                                            {isPassed ? <Check size={12} /> : <X size={12} />}
+                                            <span>{resItem.verdict}</span>
+                                          </span>
+                                          <span className="tc-time">{resItem.exec_time_ms || 0} ms</span>
+                                        </div>
+                                      </div>
+
+                                      {/* Failed Sample Case Diff */}
+                                      {!isPassed && isSample && resItem.testcase && (
+                                        <div className="tc-sample-diff-box">
+                                          {resItem.testcase.input && (
+                                            <div className="diff-item">
+                                              <span className="diff-lbl">Input (stdin):</span>
+                                              <pre className="diff-val">{resItem.testcase.input}</pre>
+                                            </div>
+                                          )}
+                                          {resItem.testcase.output && (
+                                            <div className="diff-item">
+                                              <span className="diff-lbl">Expected Output:</span>
+                                              <pre className="diff-val">{resItem.testcase.output}</pre>
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+
+                                      {/* Failed Hidden Case Notice */}
+                                      {!isPassed && !isSample && (
+                                        <div className="tc-hidden-note">
+                                          <span>Input & Expected Output hidden for confidential test cases.</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })
+                              ) : (
+                                <p className="no-cases-text">No test case details available.</p>
+                              )}
+                            </div>
+                          )}
+
+                        </div>
+                      ) : (
+                        <div className="output-placeholder-state">
+                          <span className="output-placeholder-text">
+                            Submit your code to evaluate against all test cases.
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                </div>
               )}
-
             </div>
-          </div>
 
+          </Panel>
+          </Group>
         </Panel>
 
-      </PanelGroup>
+      </Group>
     </div>
   );
 };

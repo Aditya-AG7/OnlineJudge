@@ -82,6 +82,7 @@
   flex: 1;
   height: calc(100vh - 56px);
   width: 100%;
+  height: 100%;
   overflow: hidden;
   background-color: var(--border-subtle);
 }
@@ -100,14 +101,86 @@
   background-color: var(--color-red-primary, #ff3b30);
 }
 
+.resize-handle-vertical {
+  height: 6px;
+  background-color: #161622;
+  cursor: row-resize;
+  transition: background-color 0.15s ease;
+  z-index: 10;
+}
+
+.resize-handle-vertical:hover,
+.resize-handle-vertical[data-separator-active] {
+  background-color: var(--color-red-primary, #ff3b30);
+}
+
 /* ================= LEFT PANEL: Problem Details ================= */
 .problem-left-panel {
   background-color: #0c0c11;
-  overflow-y: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-content-container {
   padding: 1.5rem;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  height: 100%;
+}
+
+.panel-title-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+/* Collapsed Description Strip */
+.collapsed-desc-strip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.75rem 0.25rem;
+  gap: 1.25rem;
+  height: 100%;
+  background-color: #0c0c11;
+  user-select: none;
+}
+
+.collapsed-desc-title {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Collapse / Expand Toggle Buttons */
+.btn-panel-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-panel-toggle:hover {
+  color: var(--color-white);
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .panel-section {
@@ -306,6 +379,13 @@
   overflow: hidden;
 }
 
+.problem-code-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
 /* Editor Header Bar */
 .editor-header-bar {
   display: flex;
@@ -367,7 +447,8 @@
   display: flex;
   flex-direction: column;
   position: relative;
-  min-height: 180px;
+  min-height: 0;
+  height: 100%;
 }
 
 .code-textarea-placeholder {
@@ -398,8 +479,8 @@
   background-color: #08080d;
   display: flex;
   flex-direction: column;
-  height: 260px;
-  min-height: 200px;
+  height: 100%;
+  min-height: 0;
 }
 
 /* Custom Input & Testcase Sub-tabs */
@@ -511,10 +592,22 @@
 .output-tabs-header {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  justify-content: space-between;
   padding: 0.35rem 0.75rem;
   background-color: #0e0e16;
   border-bottom: 1px solid var(--border-subtle);
+  user-select: none;
+}
+
+.tabs-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.tabs-header-right {
+  display: flex;
+  align-items: center;
 }
 
 .output-tab-btn {
