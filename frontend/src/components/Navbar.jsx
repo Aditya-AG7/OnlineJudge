@@ -1,54 +1,74 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Code2, LogOut, User as UserIcon, ShieldCheck, ListFilter, Users, LayoutDashboard, Plus } from 'lucide-react';
+import { Code2, LogOut, User as UserIcon, Users, Plus, Play, Send, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useProblemActions } from '../context/ProblemActionsContext';
 import './Navbar.css';
 
 export const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
+  const { actions } = useProblemActions() || {};
   const location = useLocation();
   const navigate = useNavigate();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
 
   const isAdmin = user?.type === 'admin';
   const isSetterOrAdmin = user?.type === 'admin' || user?.type === 'problem_setter';
   const currentPath = location.pathname;
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const handleLogout = () => {
+    setIsDropdownOpen(false);
     logout();
     navigate('/login', { replace: true });
+  };
+
+  const handleProfileClick = () => {
+    setIsDropdownOpen(false);
+    navigate('/profile');
   };
 
   return (
     <header className="navbar">
       <div className="navbar-container">
-        <div className="navbar-brand" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>
-          <div className="brand-icon-wrapper">
-            <Code2 size={22} className="brand-icon" />
+        <div className="navbar-left">
+          <div className="navbar-brand" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>
+            <div className="brand-icon-wrapper">
+              <Code2 size={18} className="brand-icon" />
+            </div>
+            <span className="brand-title">
+              ONLINE<span className="brand-title-accent">JUDGE</span>
+            </span>
           </div>
-          <span className="brand-title">
-            ONLINE<span className="brand-title-accent">JUDGE</span>
-          </span>
-        </div>
 
-        {isAuthenticated && user && (
-          <div className="navbar-user-section">
+          {isAuthenticated && user && (
             <div className="navbar-view-switcher">
-              <button
-                type="button"
-                className={`nav-tab-btn ${currentPath === '/dashboard' ? 'active' : ''}`}
-                onClick={() => navigate('/dashboard')}
-              >
-                <LayoutDashboard size={14} />
-                <span>Dashboard</span>
-              </button>
-
               <button
                 type="button"
                 className={`nav-tab-btn ${currentPath.startsWith('/problems') && currentPath !== '/admin/add-problem' ? 'active' : ''}`}
                 onClick={() => navigate('/problems')}
               >
-                <ListFilter size={14} />
                 <span>Problems</span>
+              </button>
+
+              <button
+                type="button"
+                className={`nav-tab-btn`}
+              >
+                <span>Contests</span>
               </button>
 
               {isSetterOrAdmin && (
@@ -73,25 +93,92 @@ export const Navbar = () => {
                 </button>
               )}
             </div>
+          )}
+        </div>
 
-            <div 
-              className="user-badge" 
-              onClick={() => navigate('/profile')} 
-              style={{ cursor: 'pointer' }} 
-              title="View Profile"
+        {isAuthenticated && user && actions && (
+          <div className="navbar-center-actions">
+            <button
+              className="btn-run-action"
+              type="button"
+              onClick={actions.onRun}
+              disabled={actions.running || actions.submitting}
             >
-              <UserIcon size={14} className="user-badge-icon" />
-              <span className="user-username">@{user.username}</span>
-              <span className={`role-pill role-${user.type || 'user'}`}>
-                {user.type === 'admin' && <ShieldCheck size={12} />}
-                {(user.type || 'user').toUpperCase()}
-              </span>
-            </div>
-
-            <button className="btn-logout" onClick={handleLogout} title="Sign Out">
-              <LogOut size={16} />
-              <span>Logout</span>
+              {actions.running ? (
+                <>
+                  <RefreshCw size={14} className="spin-icon" />
+                  <span>Running...</span>
+                </>
+              ) : (
+                <>
+                  <Play size={14} />
+                  <span>Run</span>
+                </>
+              )}
             </button>
+
+            <button
+              className="btn-submit-action"
+              type="button"
+              onClick={actions.onSubmit}
+              disabled={actions.running || actions.submitting}
+            >
+              {actions.submitting ? (
+                <>
+                  <RefreshCw size={14} className="spin-icon" />
+                  <span>Submitting...</span>
+                </>
+              ) : (
+                <>
+                  <Send size={14} />
+                  <span>Submit</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {isAuthenticated && user && (
+          <div className="navbar-right">
+            <div className="user-dropdown-container" ref={dropdownRef}>
+              <button
+                type="button"
+                className={`user-dropdown-trigger ${isDropdownOpen ? 'active' : ''}`}
+                onClick={() => setIsDropdownOpen((prev) => !prev)}
+                title="User menu"
+                aria-expanded={isDropdownOpen}
+                aria-haspopup="true"
+              >
+                <UserIcon size={16} className="user-badge-icon" />
+              </button>
+
+              {isDropdownOpen && (
+                <div className="user-dropdown-menu" role="menu">
+                  <span className="user-username">
+                    <UserIcon size={25} className="user-badge-icon" /> @{user.username}
+                  </span>
+                  <button
+                    type="button"
+                    className="dropdown-item"
+                    role="menuitem"
+                    onClick={handleProfileClick}
+                  >
+                    <UserIcon size={15} />
+                    <span>Profile</span>
+                  </button>
+                  <div className="dropdown-divider" />
+                  <button
+                    type="button"
+                    className="dropdown-item logout-item"
+                    role="menuitem"
+                    onClick={handleLogout}
+                  >
+                    <LogOut size={15} />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

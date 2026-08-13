@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ProblemActionsProvider } from './context/ProblemActionsContext';
 import { Navbar } from './components/Navbar';
 import { AuthCard } from './components/AuthCard';
 import { DashboardTiles } from './components/DashboardTiles';
@@ -85,7 +86,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
+        <ProblemActionsProvider>
+          <AppRoutes />
+        </ProblemActionsProvider>
       </AuthProvider>
     </BrowserRouter>
   );

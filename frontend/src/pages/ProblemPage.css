@@ -3,7 +3,7 @@
 .problem-page-container {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 65px);
+  height: calc(100vh - 55px);
   background-color: var(--bg-main);
   color: var(--color-text-primary);
   overflow: hidden;
@@ -593,7 +593,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.35rem 0.75rem;
+  height: 36px;
+  box-sizing: border-box;
+  padding: 0 0.75rem;
   background-color: #0e0e16;
   border-bottom: 1px solid var(--border-subtle);
   user-select: none;

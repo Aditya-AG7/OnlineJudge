@@ -10,6 +10,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { problemAPI, compileAPI, submissionAPI, formatAPI } from '../services/api';
+import { useProblemActions } from '../context/ProblemActionsContext';
 import './ProblemPage.css';
 
 // Default language identifier (meant to be replaced by a real language selector later)
@@ -18,6 +19,7 @@ const CURRENT_LANGUAGE = 'cpp';
 export const ProblemPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { setActions } = useProblemActions();
 
   const [problem, setProblem] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -75,6 +77,14 @@ int main() {
         panel.collapse();
         setIsOutputCollapsed(true);
       }
+    }
+  };
+
+  const handleOutputTabClick = (tab) => {
+    setActiveOutputTab(tab);
+    if (outputPanelRef.current && outputPanelRef.current.isCollapsed()) {
+      outputPanelRef.current.expand();
+      setIsOutputCollapsed(false);
     }
   };
 
@@ -245,6 +255,11 @@ int main() {
   const handleRun = async () => {
     if (running || submitting) return;
 
+    if (outputPanelRef.current && outputPanelRef.current.isCollapsed()) {
+      outputPanelRef.current.expand();
+      setIsOutputCollapsed(false);
+    }
+
     setRunning(true);
     setApiError(null);
     setActiveOutputTab('run');
@@ -334,6 +349,11 @@ int main() {
   const handleSubmit = async () => {
     if (running || submitting) return;
 
+    if (outputPanelRef.current && outputPanelRef.current.isCollapsed()) {
+      outputPanelRef.current.expand();
+      setIsOutputCollapsed(false);
+    }
+
     setSubmitting(true);
     setApiError(null);
     setActiveOutputTab('submission');
@@ -361,6 +381,16 @@ int main() {
       setSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    setActions({
+      onRun: handleRun,
+      onSubmit: handleSubmit,
+      running,
+      submitting,
+    });
+    return () => setActions(null);
+  }, [running, submitting, handleRun, handleSubmit, setActions]);
 
   if (loading) {
     return (
@@ -396,59 +426,6 @@ int main() {
 
   return (
     <div className="problem-page-container">
-      {/* Top Bar Navigation & Actions */}
-      <div className="problem-page-header">
-        <div className="header-left">
-          <button className="btn-back-link" onClick={() => navigate('/problems')}>
-            <ArrowLeft size={16} />
-            <span>Problem List</span>
-          </button>
-        </div>
-
-        {/* Centered Run & Submit Action Buttons */}
-        <div className="header-center-actions">
-          <button
-            className="btn-run-action"
-            type="button"
-            onClick={handleRun}
-            disabled={running || submitting}
-          >
-            {running ? (
-              <>
-                <RefreshCw size={15} className="spin-icon" />
-                <span>Running...</span>
-              </>
-            ) : (
-              <>
-                <Play size={15} />
-                <span>Run</span>
-              </>
-            )}
-          </button>
-
-          <button
-            className="btn-submit-action"
-            type="button"
-            onClick={handleSubmit}
-            disabled={running || submitting}
-          >
-            {submitting ? (
-              <>
-                <RefreshCw size={15} className="spin-icon" />
-                <span>Submitting...</span>
-              </>
-            ) : (
-              <>
-                <Send size={15} />
-                <span>Submit</span>
-              </>
-            )}
-          </button>
-        </div>
-
-        <div className="header-right" />
-      </div>
-
       {/* Two-Panel Layout */}
       <Group orientation="horizontal" className="problem-workspace-grid">
 
@@ -630,7 +607,7 @@ int main() {
               defaultSize={50}
               minSize={20}
               collapsible={true}
-              collapsedSize={40}
+              collapsedSize={36}
               onResize={() => {
                 if (outputPanelRef.current) {
                   setIsOutputCollapsed(outputPanelRef.current.isCollapsed());
@@ -647,7 +624,7 @@ int main() {
                     <button
                       type="button"
                       className={`output-tab-btn ${activeOutputTab === 'testcase' ? 'active' : ''}`}
-                      onClick={() => setActiveOutputTab('testcase')}
+                      onClick={() => handleOutputTabClick('testcase')}
                     >
                       <Layers size={13} />
                       <span>Testcase</span>
@@ -656,7 +633,7 @@ int main() {
                     <button
                       type="button"
                       className={`output-tab-btn ${activeOutputTab === 'run' ? 'active' : ''}`}
-                      onClick={() => setActiveOutputTab('run')}
+                      onClick={() => handleOutputTabClick('run')}
                     >
                       <Terminal size={13} />
                       <span>Test Result</span>
@@ -665,7 +642,7 @@ int main() {
                     <button
                       type="button"
                       className={`output-tab-btn ${activeOutputTab === 'submission' ? 'active' : ''}`}
-                      onClick={() => setActiveOutputTab('submission')}
+                      onClick={() => handleOutputTabClick('submission')}
                     >
                       <Send size={13} />
                       <span>Submission Results</span>
