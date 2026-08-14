@@ -176,6 +176,17 @@ export const submissionAPI = {
       method: 'GET',
     });
   },
+
+  /**
+   * Fetch submissions list for problem or user (GET /submissions?problem_id=...)
+   * @param {Object} params { problem_id, user_id }
+   */
+  async getSubmissions(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return request(`/submissions${query ? `?${query}` : ''}`, {
+      method: 'GET',
+    });
+  },
 };
 
 export const formatAPI = {
