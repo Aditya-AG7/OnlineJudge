@@ -16,6 +16,7 @@ export const Navbar = () => {
   const isAdmin = user?.type === 'admin';
   const isSetterOrAdmin = user?.type === 'admin' || user?.type === 'problem_setter';
   const currentPath = location.pathname;
+  const isProblemPage = currentPath.startsWith('/problems/') && currentPath !== '/problems';
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -54,7 +55,8 @@ export const Navbar = () => {
             </span>
           </div>
 
-          {isAuthenticated && user && (
+          {/* Usual content (nav links) shown on all pages EXCEPT problem pages */}
+          {isAuthenticated && user && !isProblemPage && (
             <div className="navbar-view-switcher">
               <button
                 type="button"
@@ -96,15 +98,16 @@ export const Navbar = () => {
           )}
         </div>
 
-        {isAuthenticated && user && actions && (
+        {/* Centered Run & Submit action buttons shown ONLY on problem pages */}
+        {isAuthenticated && user && isProblemPage && (
           <div className="navbar-center-actions">
             <button
               className="btn-run-action"
               type="button"
-              onClick={actions.onRun}
-              disabled={actions.running || actions.submitting}
+              onClick={actions?.onRun}
+              disabled={!actions || actions.running || actions.submitting}
             >
-              {actions.running ? (
+              {actions?.running ? (
                 <>
                   <RefreshCw size={14} className="spin-icon" />
                   <span>Running...</span>
@@ -120,10 +123,10 @@ export const Navbar = () => {
             <button
               className="btn-submit-action"
               type="button"
-              onClick={actions.onSubmit}
-              disabled={actions.running || actions.submitting}
+              onClick={actions?.onSubmit}
+              disabled={!actions || actions.running || actions.submitting}
             >
-              {actions.submitting ? (
+              {actions?.submitting ? (
                 <>
                   <RefreshCw size={14} className="spin-icon" />
                   <span>Submitting...</span>

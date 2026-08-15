@@ -534,15 +534,24 @@ int main() {
     }
   };
 
+  const handleRunRef = useRef(handleRun);
+  handleRunRef.current = handleRun;
+
+  const handleSubmitRef = useRef(handleSubmit);
+  handleSubmitRef.current = handleSubmit;
+
   useEffect(() => {
+    const onRun = () => handleRunRef.current();
+    const onSubmit = () => handleSubmitRef.current();
+
     setActions({
-      onRun: handleRun,
-      onSubmit: handleSubmit,
+      onRun,
+      onSubmit,
       running,
       submitting,
     });
     return () => setActions(null);
-  }, [running, submitting, handleRun, handleSubmit, setActions]);
+  }, [running, submitting, setActions]);
 
   if (loading) {
     return (
