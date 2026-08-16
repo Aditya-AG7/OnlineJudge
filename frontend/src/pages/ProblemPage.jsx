@@ -17,10 +17,15 @@ import './ProblemPage.css';
 const CURRENT_LANGUAGE = 'cpp';
 
 // Extracted component for displaying submission verdict banner and test case breakdown
-const SubmissionVerdictDetails = ({ submission }) => {
+const SubmissionVerdictDetails = ({ submission, showBreakdown = true }) => {
   if (!submission) return null;
 
   const statusLower = (submission.status || '').toLowerCase();
+  const results = submission.results || [];
+  const passedCount = results.filter((r) => r.verdict === 'Passed').length;
+  const totalCount = submission.total_test_cases ?? (submission.problem?.total_test_cases) ?? results.length;
+
+  const sampleResults = results.filter((resItem) => resItem.testcase?.is_sample);
 
   return (
     <div className="submission-result-view">
@@ -34,79 +39,81 @@ const SubmissionVerdictDetails = ({ submission }) => {
           )}
           <div>
             <h3 className="verdict-title">{submission.status}</h3>
-            <span className="verdict-meta">
-              Max Exec Time: {submission.exec_time_ms || 0} ms
-            </span>
+            <div className="verdict-meta-container" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.2rem', flexWrap: 'wrap' }}>
+              {submission.status !== 'CompileError' && (
+                <>
+                  <span className="verdict-meta">
+                    {passedCount} / {totalCount} test cases passed
+                  </span>
+                  <span style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem' }}>•</span>
+                </>
+              )}
+              <span className="verdict-meta">
+                Max Exec Time: {submission.exec_time_ms || 0} ms
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Test Case Breakdown */}
-      {submission.status === 'CompileError' ? (
-        <div className="code-output-block error-block" style={{ marginTop: '0.75rem' }}>
-          <span className="output-block-label text-red">Compilation Failed:</span>
-          <p className="code-output-text">Your code failed to compile. No test cases were executed.</p>
-        </div>
-      ) : (
-        <div className="testcase-results-list">
-          <h4 className="tc-results-heading">Test Case Breakdown</h4>
-          {submission.results && submission.results.length > 0 ? (
-            submission.results.map((resItem, idx) => {
-              const isSample = resItem.testcase?.is_sample;
-              const isPassed = resItem.verdict === 'Passed';
-
-              return (
-                <div key={resItem._id || idx} className={`tc-result-item ${isPassed ? 'passed' : 'failed'}`}>
-                  <div className="tc-result-header">
-                    <div className="tc-title-meta">
-                      <span className="tc-num">Test Case #{idx + 1}</span>
-                      {isSample ? (
-                        <span className="sample-badge sample">Sample</span>
-                      ) : (
-                        <span className="sample-badge hidden">Hidden</span>
-                      )}
-                    </div>
-
-                    <div className="tc-status-meta">
-                      <span className={`tc-verdict-tag verdict-${(resItem.verdict || '').toLowerCase()}`}>
-                        {isPassed ? <Check size={12} /> : <X size={12} />}
-                        <span>{resItem.verdict}</span>
-                      </span>
-                      <span className="tc-time">{resItem.exec_time_ms || 0} ms</span>
-                    </div>
-                  </div>
-
-                  {/* Failed Sample Case Diff */}
-                  {!isPassed && isSample && resItem.testcase && (
-                    <div className="tc-sample-diff-box">
-                      {resItem.testcase.input && (
-                        <div className="diff-item">
-                          <span className="diff-lbl">Input (stdin):</span>
-                          <pre className="diff-val">{resItem.testcase.input}</pre>
-                        </div>
-                      )}
-                      {resItem.testcase.output && (
-                        <div className="diff-item">
-                          <span className="diff-lbl">Expected Output:</span>
-                          <pre className="diff-val">{resItem.testcase.output}</pre>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Failed Hidden Case Notice */}
-                  {!isPassed && !isSample && (
-                    <div className="tc-hidden-note">
-                      <span>Input & Expected Output hidden for confidential test cases.</span>
-                    </div>
-                  )}
-                </div>
-              );
-            })
+      {/* Test Case Breakdown (Rendered only when showBreakdown is true) */}
+      {showBreakdown && (
+        <>
+          {submission.status === 'CompileError' ? (
+            <div className="code-output-block error-block" style={{ marginTop: '0.75rem' }}>
+              <span className="output-block-label text-red">Compilation Failed:</span>
+              <p className="code-output-text">Your code failed to compile. No test cases were executed.</p>
+            </div>
           ) : (
-            <p className="no-cases-text">No test case details available.</p>
+            <div className="testcase-results-list">
+              <h4 className="tc-results-heading">Test Case Breakdown</h4>
+              {sampleResults.length > 0 ? (
+                sampleResults.map((resItem, idx) => {
+                  const isPassed = resItem.verdict === 'Passed';
+
+                  return (
+                    <div key={resItem._id || idx} className={`tc-result-item ${isPassed ? 'passed' : 'failed'}`}>
+                      <div className="tc-result-header">
+                        <div className="tc-title-meta">
+                          <span className="tc-num">Sample Case #{idx + 1}</span>
+                          <span className="sample-badge sample">Sample</span>
+                        </div>
+
+                        <div className="tc-status-meta">
+                          <span className={`tc-verdict-tag verdict-${(resItem.verdict || '').toLowerCase()}`}>
+                            {isPassed ? <Check size={12} /> : <X size={12} />}
+                            <span>{resItem.verdict}</span>
+                          </span>
+                          <span className="tc-time">{resItem.exec_time_ms || 0} ms</span>
+                        </div>
+                      </div>
+
+                      {/* Failed Sample Case Diff */}
+                      {!isPassed && resItem.testcase && (
+                        <div className="tc-sample-diff-box">
+                          {resItem.testcase.input && (
+                            <div className="diff-item">
+                              <span className="diff-lbl">Input (stdin):</span>
+                              <pre className="diff-val">{resItem.testcase.input}</pre>
+                            </div>
+                          )}
+                          {resItem.testcase.output && (
+                            <div className="diff-item">
+                              <span className="diff-lbl">Expected Output:</span>
+                              <pre className="diff-val">{resItem.testcase.output}</pre>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="no-cases-text">No sample test case details available.</p>
+              )}
+            </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );
@@ -770,7 +777,7 @@ int main() {
                         </div>
                       ) : (
                         <>
-                          <SubmissionVerdictDetails submission={selectedSubmissionDetail} />
+                          <SubmissionVerdictDetails submission={selectedSubmissionDetail} showBreakdown={false} />
 
                           <div className="submission-code-section" style={{ marginTop: '1.25rem' }}>
                             <h4 className="tc-results-heading">Submitted Code (C++)</h4>

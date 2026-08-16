@@ -37,7 +37,7 @@ async function createSubmission(req, res) {
       return res.status(404).json({ error: 'Problem not found' });
     }
 
-    const testCases = await TestCase.find({ problem: problemId });
+    const testCases = await TestCase.find({ problem: problemId }).sort({ createdAt: 1, _id: 1 });
 
     // 1. Write source code to temporary .cpp file
     fs.writeFileSync(cppFile, source_code, 'utf8');
@@ -72,7 +72,7 @@ async function createSubmission(req, res) {
     let firstFailureVerdict = null;
     let maxExecTime = 0;
 
-    // 4. Run compiled binary against all test cases
+    // 4. Run compiled binary against test cases sequentially (early exit on first failure)
     for (const tc of testCases) {
       const start = Date.now();
       const execRes = await runBinary(outFile, tc.input || '', problem.time_limit_ms || 2000, tmpDir);
@@ -99,10 +99,6 @@ async function createSubmission(req, res) {
         }
       }
 
-      if (verdict !== 'Passed' && !firstFailureVerdict) {
-        firstFailureVerdict = verdict;
-      }
-
       const resultDoc = await SubmissionResult.create({
         submission: submission._id,
         testcase: tc._id,
@@ -112,6 +108,11 @@ async function createSubmission(req, res) {
       });
 
       results.push(resultDoc);
+
+      if (verdict !== 'Passed') {
+        firstFailureVerdict = verdict;
+        break;
+      }
     }
 
     // 5. Determine overall Submission status
@@ -132,6 +133,7 @@ async function createSubmission(req, res) {
 
     return res.status(201).json({
       ...submission.toObject(),
+      total_test_cases: testCases.length,
       results,
     });
   } catch (err) {
@@ -195,8 +197,11 @@ async function getSubmissionById(req, res) {
       return obj;
     });
 
+    const totalTestCases = await TestCase.countDocuments({ problem: submission.problem._id || submission.problem });
+
     return res.status(200).json({
       ...submission.toObject(),
+      total_test_cases: totalTestCases,
       results: safeResults,
     });
   } catch (err) {
