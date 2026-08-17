@@ -13,8 +13,28 @@ import { problemAPI, compileAPI, submissionAPI, formatAPI } from '../services/ap
 import { useProblemActions } from '../context/ProblemActionsContext';
 import './ProblemPage.css';
 
-// Default language identifier (meant to be replaced by a real language selector later)
-const CURRENT_LANGUAGE = 'cpp';
+// Starter code templates per language
+const STARTER_TEMPLATES = {
+  cpp: `#include <iostream>
+using namespace std;
+
+int main() {
+    // Write your solution here
+    return 0;
+}`,
+  c: `#include <stdio.h>
+
+int main() {
+    // Write your solution here
+    return 0;
+}`,
+  java: `public class Main {
+    public static void main(String[] args) {
+        // Write your solution here
+    }
+}`,
+  python: `# Write your solution here\n`,
+};
 
 // Extracted component for displaying submission verdict banner and test case breakdown
 const SubmissionVerdictDetails = ({ submission, showBreakdown = true }) => {
@@ -128,16 +148,29 @@ export const ProblemPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Starter C++ code template
-  const [code, setCode] = useState(
-    `#include <iostream>
-using namespace std;
+  const [language, setLanguage] = useState('cpp');
+  const [code, setCode] = useState(STARTER_TEMPLATES.cpp);
 
-int main() {
-    // Write your solution here
-    return 0;
-}`
-  );
+  const handleLanguageChange = (e) => {
+    const newLang = e.target.value;
+    if (newLang === language) return;
+
+    const isTemplateCode = Object.values(STARTER_TEMPLATES).some(
+      (template) => template.trim() === code.trim()
+    );
+
+    if (!isTemplateCode) {
+      const confirmed = window.confirm(
+        'Switching language will overwrite your current code. Are you sure you want to proceed?'
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    setLanguage(newLang);
+    setCode(STARTER_TEMPLATES[newLang]);
+  };
 
   // Execution & Submission States
   const [running, setRunning] = useState(false);
@@ -210,7 +243,7 @@ int main() {
     try {
       const res = await formatAPI.formatCode({
         source_code: code,
-        language: CURRENT_LANGUAGE,
+        language,
       });
 
       if (res && res.formatted_code) {
@@ -428,6 +461,7 @@ int main() {
         const res = await compileAPI.runCode({
           source_code: code,
           input: '',
+          language,
         });
         setRunResult({
           mode: 'single',
@@ -440,6 +474,7 @@ int main() {
             const res = await compileAPI.runCode({
               source_code: code,
               input: tc.input || '',
+              language,
             });
             return { tc, res };
           })
@@ -860,7 +895,16 @@ int main() {
               <div className="editor-header-bar">
                 <div className="lang-indicator">
                   <Code2 size={16} className="icon-accent" />
-                  <span className="lang-name">C++</span>
+                  <select
+                    className="lang-select"
+                    value={language}
+                    onChange={handleLanguageChange}
+                  >
+                    <option value="cpp">C++</option>
+                    <option value="c">C</option>
+                    <option value="java">Java</option>
+                    <option value="python">Python</option>
+                  </select>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
