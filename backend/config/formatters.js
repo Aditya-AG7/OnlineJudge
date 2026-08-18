@@ -1,14 +1,22 @@
 const path = require('path');
 
+const pyCmd = process.platform === 'win32' ? 'python' : 'python3';
+
 module.exports = {
   cpp: {
     extension: '.cpp',
-    command: (filepath) => `npx --no-install clang-format -style="{BasedOnStyle: Google, IndentWidth: 4}" ${path.resolve(filepath).replace(/\\/g, '/')}`,
+    command: (filepath) => `npx --no-install clang-format -style="{BasedOnStyle: Google, IndentWidth: 4}" "${path.resolve(filepath).replace(/\\/g, '/')}"`,
   },
-  // Future languages get added here, e.g.:
-  // python: { extension: '.py', command: (filepath) => `black --quiet - < ${filepath}` },
-  // java: { extension: '.java', command: (filepath) => `clang-format -style="{BasedOnStyle: Google, IndentWidth: 4}" ${filepath}` },
+  c: {
+    extension: '.c',
+    command: (filepath) => `npx --no-install clang-format -style="{BasedOnStyle: Google, IndentWidth: 4}" "${path.resolve(filepath).replace(/\\/g, '/')}"`,
+  },
+  java: {
+    extension: '.java',
+    command: (filepath) => `npx --no-install clang-format -style="{BasedOnStyle: Google, IndentWidth: 4}" "${path.resolve(filepath).replace(/\\/g, '/')}"`,
+  },
+  python: {
+    extension: '.py',
+    command: (filepath) => `${pyCmd} -c "import sys, ast; print(ast.unparse(ast.parse(open(sys.argv[1], 'r', encoding='utf-8').read())))" "${path.resolve(filepath).replace(/\\/g, '/')}"`,
+  },
 };
-
-
-

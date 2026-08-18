@@ -1,3 +1,5 @@
+const pyCmd = process.platform === 'win32' ? 'python' : 'python3';
+
 module.exports = {
   cpp: {
     extension: '.cpp',
@@ -20,6 +22,6 @@ module.exports = {
   python: {
     extension: '.py',
     compile: null, // no compile step, interpreted directly
-    run: (filepath) => `python3 ${filepath}`,
+    run: (filepath) => `${pyCmd} ${filepath}`,
   },
 };

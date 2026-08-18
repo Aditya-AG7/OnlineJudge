@@ -917,7 +917,6 @@ export const ProblemPage = () => {
                   >
                     <span>{"{ }"}</span>
                   </button>
-                  <span className="editor-status-text">Drafting Solution</span>
                 </div>
               </div>
 
