@@ -1,71 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { exec, spawn } = require('child_process');
 const languages = require('../config/languages');
-
-function compileCode(command) {
-  return new Promise((resolve) => {
-    exec(command, (err, stdout, stderr) => {
-      if (err) {
-        return resolve({
-          success: false,
-          compileError: stderr || err.message || 'Compilation error',
-        });
-      }
-      return resolve({ success: true });
-    });
-  });
-}
-
-function runExecutable(runCommand, inputData = '', timeoutMs = 5000, cwd = process.cwd()) {
-  return new Promise((resolve, reject) => {
-    const parts = runCommand.split(' ');
-    const cmd = parts[0];
-    const args = parts.slice(1);
-
-    const child = spawn(cmd, args, { cwd });
-
-    let stdout = '';
-    let stderr = '';
-    let isTimedOut = false;
-
-    const timer = setTimeout(() => {
-      isTimedOut = true;
-      child.kill('SIGKILL');
-    }, timeoutMs);
-
-    child.stdout.on('data', (data) => {
-      stdout += data.toString();
-    });
-
-    child.stderr.on('data', (data) => {
-      stderr += data.toString();
-    });
-
-    child.on('error', (err) => {
-      clearTimeout(timer);
-      reject(err);
-    });
-
-    child.on('close', (code) => {
-      clearTimeout(timer);
-      if (isTimedOut) {
-        return resolve({ status: 'TimeLimitExceeded', output: stdout, stderr, code: null });
-      }
-      if (code === 0) {
-        return resolve({ status: 'Success', output: stdout, stderr, code: 0 });
-      } else {
-        return resolve({ status: 'RuntimeError', output: stdout, stderr, code });
-      }
-    });
-
-    if (inputData) {
-      child.stdin.write(inputData);
-    }
-    child.stdin.end();
-  });
-}
+const { compileCommand, runCommand } = require('../utils/compiler');
 
 // POST /run
 async function runCode(req, res) {
@@ -105,7 +42,7 @@ async function runCode(req, res) {
         const compileArg = langConfig.fixedFilename ? jobDir : outFile;
         const compileCmd = langConfig.compile(sourceFile, compileArg);
 
-        const compileRes = await compileCode(compileCmd);
+        const compileRes = await compileCommand(compileCmd, jobDir);
         if (!compileRes.success) {
           return res.status(200).json({
             status: 'CompileError',
@@ -114,17 +51,25 @@ async function runCode(req, res) {
         }
       }
 
-      // 3. Determine run command
+      // 3. Determine run command and timeout (with Java JVM cold-start offset allowance)
       const runArg = langConfig.fixedFilename
         ? jobDir
         : (langConfig.compile ? outFile : sourceFile);
-      const runCmd = langConfig.run(runArg);
+      const runCmdStr = langConfig.run(runArg);
+      const timeoutMs = 5000 + (langConfig.timeoutOffsetMs || 0);
 
-      // 4. Run command with 5s execution timeout
-      const execResult = await runExecutable(runCmd, inputData, 5000, jobDir);
+      // 4. Run command with execution timeout
+      const execResult = await runCommand(runCmdStr, inputData, timeoutMs, jobDir, langConfig.isParseError);
 
       if (execResult.status === 'TimeLimitExceeded') {
         return res.status(200).json({ status: 'TimeLimitExceeded' });
+      }
+
+      if (execResult.status === 'CompileError') {
+        return res.status(200).json({
+          status: 'CompileError',
+          error: execResult.compileError || execResult.stderr,
+        });
       }
 
       if (execResult.status === 'RuntimeError') {
@@ -141,7 +86,7 @@ async function runCode(req, res) {
         stderr: execResult.stderr,
       });
     } finally {
-      // Clean up temporary files/directory
+      // Clean up temporary job directory
       if (fs.existsSync(jobDir)) {
         try {
           fs.rmSync(jobDir, { recursive: true, force: true });

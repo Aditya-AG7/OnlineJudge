@@ -7,7 +7,8 @@ const Submission = require('../models/Submission');
 const SubmissionResult = require('../models/SubmissionResult');
 const Problem = require('../models/Problem');
 const TestCase = require('../models/TestCase');
-const { compileCpp, runBinary } = require('../utils/compiler');
+const languages = require('../config/languages');
+const { compileCommand, runCommand } = require('../utils/compiler');
 
 // POST /submissions
 async function createSubmission(req, res) {
@@ -17,16 +18,23 @@ async function createSubmission(req, res) {
   }
 
   const fileId = crypto.randomUUID();
-  const cppFile = path.join(tmpDir, `${fileId}.cpp`);
-  const outFile = path.join(tmpDir, `${fileId}.out`);
+  const jobDir = path.join(tmpDir, fileId);
+  fs.mkdirSync(jobDir, { recursive: true });
 
   try {
     const problemId = req.body.problem_id || req.body.problem;
     const { source_code } = req.body;
+    const language = req.body.language || 'cpp';
 
     if (!problemId || !source_code || typeof source_code !== 'string') {
       return res.status(400).json({ error: 'problem_id and source_code are required' });
     }
+
+    if (!languages[language]) {
+      return res.status(400).json({ error: `Unsupported language: ${language}` });
+    }
+
+    const langConfig = languages[language];
 
     if (!mongoose.Types.ObjectId.isValid(problemId)) {
       return res.status(404).json({ error: 'Problem not found' });
@@ -39,25 +47,33 @@ async function createSubmission(req, res) {
 
     const testCases = await TestCase.find({ problem: problemId }).sort({ createdAt: 1, _id: 1 });
 
-    // 1. Write source code to temporary .cpp file
-    fs.writeFileSync(cppFile, source_code, 'utf8');
+    const fileName = langConfig.fixedFilename || `${fileId}${langConfig.extension}`;
+    const sourceFile = path.join(jobDir, fileName);
+    const outFile = path.join(jobDir, `${fileId}.out`);
 
-    // 2. Compile source code
-    const compileRes = await compileCpp(cppFile, outFile);
+    // 1. Write source code to temporary file in job directory
+    fs.writeFileSync(sourceFile, source_code, 'utf8');
 
-    if (!compileRes.success) {
-      const submission = await Submission.create({
-        user: req.user.id,
-        problem: problemId,
-        source_code,
-        status: 'CompileError',
-        exec_time_ms: 0,
-      });
+    // 2. Pre-flight Compilation / Syntax Check stage for ALL languages
+    if (langConfig.compile) {
+      const compileArg = langConfig.fixedFilename ? jobDir : outFile;
+      const compileCmdStr = langConfig.compile(sourceFile, compileArg);
 
-      return res.status(201).json({
-        ...submission.toObject(),
-        results: [],
-      });
+      const compileRes = await compileCommand(compileCmdStr, jobDir);
+      if (!compileRes.success) {
+        const submission = await Submission.create({
+          user: req.user.id,
+          problem: problemId,
+          source_code,
+          status: 'CompileError',
+          exec_time_ms: 0,
+        });
+
+        return res.status(201).json({
+          ...submission.toObject(),
+          results: [],
+        });
+      }
     }
 
     // 3. Create initial Submission record
@@ -72,10 +88,17 @@ async function createSubmission(req, res) {
     let firstFailureVerdict = null;
     let maxExecTime = 0;
 
-    // 4. Run compiled binary against test cases sequentially (early exit on first failure)
+    const isCompiledExecutable = ['cpp', 'c'].includes(language);
+    const runArg = langConfig.fixedFilename
+      ? jobDir
+      : (isCompiledExecutable ? outFile : sourceFile);
+    const runCmdStr = langConfig.run(runArg);
+    const tcTimeoutMs = (problem.time_limit_ms || 2000) + (langConfig.timeoutOffsetMs || 0);
+
+    // 4. Run process against test cases sequentially (early exit on first failure)
     for (const tc of testCases) {
       const start = Date.now();
-      const execRes = await runBinary(outFile, tc.input || '', problem.time_limit_ms || 2000, tmpDir);
+      const execRes = await runCommand(runCmdStr, tc.input || '', tcTimeoutMs, jobDir);
       const execTime = Date.now() - start;
 
       if (execTime > maxExecTime) {
@@ -140,12 +163,11 @@ async function createSubmission(req, res) {
     console.error('createSubmission error:', err);
     return res.status(500).json({ error: err.message || 'Something went wrong creating submission' });
   } finally {
-    // Clean up temporary files
-    if (fs.existsSync(cppFile)) {
-      try { fs.unlinkSync(cppFile); } catch (e) {}
-    }
-    if (fs.existsSync(outFile)) {
-      try { fs.unlinkSync(outFile); } catch (e) {}
+    // Clean up temporary job directory
+    if (fs.existsSync(jobDir)) {
+      try {
+        fs.rmSync(jobDir, { recursive: true, force: true });
+      } catch (e) {}
     }
   }
 }
