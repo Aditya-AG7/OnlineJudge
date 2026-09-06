@@ -19,4 +19,12 @@ module.exports = {
     extension: '.py',
     command: (filepath) => `${pyCmd} -c "import sys, ast; print(ast.unparse(ast.parse(open(sys.argv[1], 'r', encoding='utf-8').read())))" "${path.resolve(filepath).replace(/\\/g, '/')}"`,
   },
+  javascript: {
+    extension: '.js',
+    command: (filepath) => `npx prettier "${path.resolve(filepath).replace(/\\/g, '/')}"`,
+  },
+  js: {
+    extension: '.js',
+    command: (filepath) => `npx prettier "${path.resolve(filepath).replace(/\\/g, '/')}"`,
+  },
 };

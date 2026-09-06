@@ -41,4 +41,11 @@ module.exports = {
     run: (filepath) => `node ${filepath}`,
     timeoutOffsetMs: 0,
   },
+  javascript: {
+    name: 'JavaScript',
+    extension: '.js',
+    compile: (filepath) => `node --check ${filepath}`,
+    run: (filepath) => `node ${filepath}`,
+    timeoutOffsetMs: 0,
+  },
 };

@@ -15,6 +15,10 @@ const submissionSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  language: {
+    type: String,
+    default: 'cpp',
+  },
   status: {
     type: String,
     enum: ['Pending', 'Accepted', 'WrongAnswer', 'TimeLimitExceeded', 'RuntimeError', 'CompileError'],

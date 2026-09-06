@@ -34,6 +34,17 @@ int main() {
     }
 }`,
   python: `# Write your solution here\n`,
+  javascript: `// Write your solution here\n`,
+  js: `// Write your solution here\n`,
+};
+
+const LANG_DISPLAY_NAMES = {
+  cpp: 'C++',
+  c: 'C',
+  java: 'Java',
+  python: 'Python',
+  js: 'JavaScript',
+  javascript: 'JavaScript',
 };
 
 // Extracted component for displaying submission verdict banner and test case breakdown
@@ -555,6 +566,7 @@ export const ProblemPage = () => {
       const initialRes = await submissionAPI.submitCode({
         problem_id: id,
         source_code: code,
+        language,
       });
 
       if (initialRes && initialRes._id) {
@@ -815,7 +827,9 @@ export const ProblemPage = () => {
                           <SubmissionVerdictDetails submission={selectedSubmissionDetail} showBreakdown={false} />
 
                           <div className="submission-code-section" style={{ marginTop: '1.25rem' }}>
-                            <h4 className="tc-results-heading">Submitted Code (C++)</h4>
+                            <h4 className="tc-results-heading">
+                              Submitted Code ({LANG_DISPLAY_NAMES[selectedSubmissionDetail.language] || selectedSubmissionDetail.language || 'C++'})
+                            </h4>
                             <pre className="submission-code-block">
                               <code>{selectedSubmissionDetail.source_code || '// No source code available'}</code>
                             </pre>
@@ -864,7 +878,7 @@ export const ProblemPage = () => {
                                     </span>
                                   </div>
                                   <div className="submission-row-lang">
-                                    <span>C++</span>
+                                    <span>{LANG_DISPLAY_NAMES[sub.language] || sub.language || 'C++'}</span>
                                   </div>
                                   <div className="submission-row-time">
                                     <span>{new Date(sub.submitted_at || sub.createdAt).toLocaleString()}</span>
@@ -904,6 +918,7 @@ export const ProblemPage = () => {
                     <option value="c">C</option>
                     <option value="java">Java</option>
                     <option value="python">Python</option>
+                    <option value="javascript">JavaScript</option>
                   </select>
                 </div>
 

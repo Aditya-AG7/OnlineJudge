@@ -65,6 +65,7 @@ async function createSubmission(req, res) {
           user: req.user.id,
           problem: problemId,
           source_code,
+          language,
           status: 'CompileError',
           exec_time_ms: 0,
         });
@@ -81,6 +82,7 @@ async function createSubmission(req, res) {
       user: req.user.id,
       problem: problemId,
       source_code,
+      language,
       status: 'Pending',
     });
 

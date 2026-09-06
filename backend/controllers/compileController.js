@@ -37,7 +37,7 @@ async function runCode(req, res) {
       // 1. Write source code to temporary file
       fs.writeFileSync(sourceFile, source_code, 'utf8');
 
-      // 2. Compile if language requires compilation
+      // 2. Compile if language requires compilation or pre-flight check
       if (langConfig.compile) {
         const compileArg = langConfig.fixedFilename ? jobDir : outFile;
         const compileCmd = langConfig.compile(sourceFile, compileArg);
@@ -51,10 +51,11 @@ async function runCode(req, res) {
         }
       }
 
-      // 3. Determine run command and timeout (with Java JVM cold-start offset allowance)
+      // 3. Determine run command and timeout
+      const isCompiledExecutable = ['cpp', 'c'].includes(language);
       const runArg = langConfig.fixedFilename
         ? jobDir
-        : (langConfig.compile ? outFile : sourceFile);
+        : (isCompiledExecutable ? outFile : sourceFile);
       const runCmdStr = langConfig.run(runArg);
       const timeoutMs = 5000 + (langConfig.timeoutOffsetMs || 0);
 
