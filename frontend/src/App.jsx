@@ -11,6 +11,7 @@ import { AddProblemPage } from './pages/AddProblemPage';
 import { AdminUserManagement } from './components/AdminUserManagement';
 import { Dashboard as UserProfile } from './components/Dashboard';
 import { ProtectedRoute, GuestRoute, AdminRoute, SetterOrAdminRoute } from './components/Guards';
+import ErrorBoundary from './components/ErrorBoundary';
 import './index.css';
 
 const Layout = ({ children }) => {
@@ -51,33 +52,35 @@ const RootRedirect = () => {
 const AppRoutes = () => {
   return (
     <Layout>
-      <Routes>
-        {/* Guest Routes (/login, /register) */}
-        <Route element={<GuestRoute />}>
-          <Route path="/login" element={<AuthCard />} />
-          <Route path="/register" element={<AuthCard />} />
-        </Route>
+      <ErrorBoundary>
+        <Routes>
+          {/* Guest Routes (/login, /register) */}
+          <Route element={<GuestRoute />}>
+            <Route path="/login" element={<AuthCard />} />
+            <Route path="/register" element={<AuthCard />} />
+          </Route>
 
-        {/* Protected Routes (/dashboard, /problems, /problems/:id, /profile) */}
-        <Route element={<ProtectedRoute />}>
-          <Route path="/dashboard" element={<DashboardHome />} />
-          <Route path="/problems" element={<ProblemsetDashboard />} />
-          <Route path="/problems/:id" element={<ProblemPage />} />
-          <Route path="/profile" element={<UserProfile />} />
-        </Route>
+          {/* Protected Routes (/dashboard, /problems, /problems/:id, /profile) */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/dashboard" element={<DashboardHome />} />
+            <Route path="/problems" element={<ProblemsetDashboard />} />
+            <Route path="/problems/:id" element={<ProblemPage />} />
+            <Route path="/profile" element={<UserProfile />} />
+          </Route>
 
-        {/* Admin & Setter Routes (/admin, /admin/add-problem) */}
-        <Route element={<SetterOrAdminRoute />}>
-          <Route path="/admin/add-problem" element={<AddProblemPage />} />
-        </Route>
-        <Route element={<AdminRoute />}>
-          <Route path="/admin" element={<AdminUserManagement />} />
-        </Route>
+          {/* Admin & Setter Routes (/admin, /admin/add-problem) */}
+          <Route element={<SetterOrAdminRoute />}>
+            <Route path="/admin/add-problem" element={<AddProblemPage />} />
+          </Route>
+          <Route element={<AdminRoute />}>
+            <Route path="/admin" element={<AdminUserManagement />} />
+          </Route>
 
-        {/* Root & Fallback Redirects */}
-        <Route path="/" element={<RootRedirect />} />
-        <Route path="*" element={<RootRedirect />} />
-      </Routes>
+          {/* Root & Fallback Redirects */}
+          <Route path="/" element={<RootRedirect />} />
+          <Route path="*" element={<RootRedirect />} />
+        </Routes>
+      </ErrorBoundary>
     </Layout>
   );
 };

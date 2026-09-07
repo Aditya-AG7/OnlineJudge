@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Problem = require('../models/Problem');
 const TestCase = require('../models/TestCase');
 
@@ -16,6 +17,11 @@ async function getAllProblems(req, res) {
 async function getProblemById(req, res) {
   try {
     const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid problem ID' });
+    }
+
     const problem = await Problem.findOne({ _id: id, is_deleted: false });
 
     if (!problem) {
@@ -39,12 +45,12 @@ async function createProblem(req, res) {
   try {
     const { title, statement, constraints, difficulty, tags, time_limit_ms, memory_limit_kb } = req.body;
 
-    if (!title || !statement) {
+    if (!title || typeof title !== 'string' || !title.trim() || !statement || typeof statement !== 'string' || !statement.trim()) {
       return res.status(400).json({ error: 'title and statement are required' });
     }
 
     const newProblem = await Problem.create({
-      title,
+      title: title.trim(),
       statement,
       constraints,
       difficulty,
@@ -65,6 +71,11 @@ async function createProblem(req, res) {
 async function updateProblem(req, res) {
   try {
     const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid problem ID' });
+    }
+
     const problem = await Problem.findOne({ _id: id, is_deleted: false });
 
     if (!problem) {
@@ -100,6 +111,11 @@ async function updateProblem(req, res) {
 async function deleteProblem(req, res) {
   try {
     const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid problem ID' });
+    }
+
     const problem = await Problem.findOne({ _id: id, is_deleted: false });
 
     if (!problem) {
@@ -128,6 +144,10 @@ async function addTestCase(req, res) {
   try {
     const { id } = req.params;
     const { input, output, is_sample } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid problem ID' });
+    }
 
     const problem = await Problem.findOne({ _id: id, is_deleted: false });
 

@@ -9,7 +9,12 @@ async function register(req, res) {
   try {
     const { full_name, username, email, password, type } = req.body;
 
-    if (!full_name || !username || !email || !password) {
+    if (
+      !full_name || typeof full_name !== 'string' || !full_name.trim() ||
+      !username || typeof username !== 'string' || !username.trim() ||
+      !email || typeof email !== 'string' || !email.trim() ||
+      !password || typeof password !== 'string'
+    ) {
       return res.status(400).json({ error: 'full_name, username, email, and password are all required' });
     }
     

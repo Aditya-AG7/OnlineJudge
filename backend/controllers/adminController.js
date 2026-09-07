@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const User = require('../models/User');
 
 // GET /admin/users - Get all registered users (Admin only)
@@ -26,6 +27,10 @@ async function updateUserRole(req, res) {
   try {
     const { id } = req.params;
     const { type } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
 
     const allowedTypes = ['user', 'problem_setter', 'admin'];
     if (!allowedTypes.includes(type)) {

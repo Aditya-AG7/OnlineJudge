@@ -16,6 +16,10 @@ async function formatCode(req, res) {
       return res.status(400).json({ error: 'source_code is required' });
     }
 
+    if (source_code.length > 100000) {
+      return res.status(400).json({ error: 'Source code exceeds maximum allowed length of 100,000 characters' });
+    }
+
     if (!language || !formatters[language]) {
       return res.status(400).json({ error: `Unsupported language: ${language}` });
     }

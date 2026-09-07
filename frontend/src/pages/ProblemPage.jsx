@@ -403,6 +403,13 @@ export const ProblemPage = () => {
   useEffect(() => {
     if (id) {
       fetchProblemDetails();
+      setRunResult(null);
+      setSubmissionResult(null);
+      setApiError(null);
+      setSelectedSubmissionDetail(null);
+      if (STARTER_TEMPLATES[language]) {
+        setCode(STARTER_TEMPLATES[language]);
+      }
     }
   }, [id]);
 

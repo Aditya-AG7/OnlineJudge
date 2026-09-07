@@ -30,6 +30,10 @@ async function createSubmission(req, res) {
       return res.status(400).json({ error: 'problem_id and source_code are required' });
     }
 
+    if (source_code.length > 100000) {
+      return res.status(400).json({ error: 'Source code exceeds maximum allowed length of 100,000 characters' });
+    }
+
     if (!languages[language]) {
       return res.status(400).json({ error: `Unsupported language: ${language}` });
     }
@@ -37,7 +41,7 @@ async function createSubmission(req, res) {
     const langConfig = languages[language];
 
     if (!mongoose.Types.ObjectId.isValid(problemId)) {
-      return res.status(404).json({ error: 'Problem not found' });
+      return res.status(400).json({ error: 'Invalid problem ID' });
     }
 
     const problem = await Problem.findOne({ _id: problemId, is_deleted: false });
@@ -180,7 +184,7 @@ async function getSubmissionById(req, res) {
     const { id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(404).json({ error: 'Submission not found' });
+      return res.status(400).json({ error: 'Invalid submission ID' });
     }
 
     const submission = await Submission.findById(id)
@@ -191,7 +195,8 @@ async function getSubmissionById(req, res) {
       return res.status(404).json({ error: 'Submission not found' });
     }
 
-    const isOwner = submission.user._id.toString() === req.user.id || submission.user.toString() === req.user.id;
+    const subUserId = submission.user?._id ? submission.user._id.toString() : submission.user?.toString();
+    const isOwner = Boolean(subUserId && subUserId === req.user.id);
     const isAdmin = req.user.type === 'admin';
 
     if (!isOwner && !isAdmin) {
