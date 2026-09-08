@@ -202,5 +202,19 @@ export const formatAPI = {
   },
 };
 
+export const aiAPI = {
+  /**
+   * Get AI Hint from Gemini (POST /ai/hint)
+   * @param {Object} data { problem_id, source_code }
+   */
+  async getHint(data) {
+    return request('/ai/hint', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+};
+
+
 
 

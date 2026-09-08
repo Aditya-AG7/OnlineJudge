@@ -8,6 +8,7 @@ const problemRoutes = require('./routes/problemRoutes');
 const compileRoutes = require('./routes/compileRoutes');
 const submissionRoutes = require('./routes/submissionRoutes');
 const formatRoutes = require('./routes/formatRoutes');
+const aiRoutes = require('./routes/aiRoutes');
 const { requireAuth, requireRole } = require('./middleware/auth');
 
 const { getAllUsers, updateUserRole } = require('./controllers/adminController');
@@ -23,6 +24,7 @@ app.use('/', problemRoutes);
 app.use('/', compileRoutes);
 app.use('/', submissionRoutes);
 app.use('/', formatRoutes);
+app.use('/', aiRoutes);
 
 app.get('/profile', requireAuth, (req, res) => {
   res.json({ message: `Hello ${req.user.username}, you are logged in as ${req.user.type}` });

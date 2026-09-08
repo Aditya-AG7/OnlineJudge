@@ -9,7 +9,7 @@ import {
   CheckCircle2, XCircle, X, Check, Plus, Layers,
   ChevronLeft, ChevronRight, ChevronDown, ChevronUp
 } from 'lucide-react';
-import { problemAPI, compileAPI, submissionAPI, formatAPI } from '../services/api';
+import { problemAPI, compileAPI, submissionAPI, formatAPI, aiAPI } from '../services/api';
 import { useProblemActions } from '../context/ProblemActionsContext';
 import './ProblemPage.css';
 
@@ -187,6 +187,10 @@ export const ProblemPage = () => {
   const [running, setRunning] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formatting, setFormatting] = useState(false);
+  const [gettingHint, setGettingHint] = useState(false);
+  const [hintContent, setHintContent] = useState(null);
+  const [hintError, setHintError] = useState(null);
+  const [isHintModalOpen, setIsHintModalOpen] = useState(false);
   const [activeOutputTab, setActiveOutputTab] = useState('testcase'); // 'testcase' | 'run' | 'submission'
   const [runResult, setRunResult] = useState(null);
   const [submissionResult, setSubmissionResult] = useState(null);
@@ -269,6 +273,38 @@ export const ProblemPage = () => {
       setApiError(err.message || 'Failed to format code.');
     } finally {
       setFormatting(false);
+    }
+  };
+
+  // AI Hint handler (POST /ai/hint)
+  const handleGetHint = async () => {
+    if (gettingHint || !code) return;
+
+    setGettingHint(true);
+    setHintError(null);
+    setHintContent(null);
+    setIsHintModalOpen(true);
+
+    try {
+      const res = await aiAPI.getHint({
+        problem_id: id,
+        source_code: code,
+      });
+
+      if (res && res.hint) {
+        setHintContent(res.hint);
+      } else {
+        setHintError('No hint returned from server.');
+      }
+    } catch (err) {
+      console.error('Get AI hint error:', err);
+      if (err.status === 401) {
+        navigate('/login');
+        return;
+      }
+      setHintError(err.message || 'Failed to fetch AI hint.');
+    } finally {
+      setGettingHint(false);
     }
   };
 
@@ -932,6 +968,17 @@ export const ProblemPage = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <button
                     type="button"
+                    className="btn-ai-hint-action"
+                    onClick={handleGetHint}
+                    disabled={gettingHint || formatting || running || submitting}
+                    title="Get AI Hint"
+                  >
+                    <Sparkles size={13} className="icon-ai-sparkle" />
+                    <span>AI Hint</span>
+                  </button>
+
+                  <button
+                    type="button"
                     className="btn-format-action"
                     onClick={handleFormat}
                     disabled={formatting || running || submitting}
@@ -1249,6 +1296,46 @@ export const ProblemPage = () => {
         </Panel>
 
       </Group>
+
+      {/* AI Hint Modal Overlay */}
+      {isHintModalOpen && (
+        <div className="ai-hint-modal-overlay" onClick={() => setIsHintModalOpen(false)}>
+          <div className="ai-hint-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="ai-hint-modal-header">
+              <div className="ai-hint-title-group">
+                <Sparkles size={18} className="icon-ai-purple" />
+                <h3>AI Hint & Complexity</h3>
+              </div>
+              <button
+                type="button"
+                className="ai-hint-close-btn"
+                onClick={() => setIsHintModalOpen(false)}
+                title="Close Hint"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="ai-hint-modal-body">
+              {gettingHint ? (
+                <div className="ai-hint-loading-state">
+                  <RefreshCw size={24} className="spin-icon icon-ai-purple" />
+                  <span>Analyzing code with Gemini AI...</span>
+                </div>
+              ) : hintError ? (
+                <div className="alert-banner error" style={{ margin: 0 }}>
+                  <AlertCircle size={18} />
+                  <span>{hintError}</span>
+                </div>
+              ) : (
+                <div className="ai-hint-content-box">
+                  <pre className="ai-hint-text">{hintContent}</pre>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
