@@ -8,7 +8,7 @@ RUN apk update && apk add --no-cache \
     python3
 
 COPY package*.json ./
-RUN npm i
+RUN npm ci
 
 COPY . .
 
