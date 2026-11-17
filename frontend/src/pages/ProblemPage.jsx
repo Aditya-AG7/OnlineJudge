@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { problemAPI, compileAPI, submissionAPI, formatAPI, aiAPI } from '../services/api';
 import { useProblemActions } from '../context/ProblemActionsContext';
+import { MarkdownRenderer } from '../components/MarkdownRenderer';
 import './ProblemPage.css';
 
 // Starter code templates per language
@@ -1329,7 +1330,7 @@ export const ProblemPage = () => {
                 </div>
               ) : (
                 <div className="ai-hint-content-box">
-                  <pre className="ai-hint-text">{hintContent}</pre>
+                  <MarkdownRenderer content={hintContent} />
                 </div>
               )}
             </div>
