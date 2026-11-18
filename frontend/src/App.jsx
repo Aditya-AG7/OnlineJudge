@@ -8,6 +8,7 @@ import { DashboardTiles } from './components/DashboardTiles';
 import { ProblemsetDashboard } from './components/ProblemsetDashboard';
 import { ProblemPage } from './pages/ProblemPage';
 import { AddProblemPage } from './pages/AddProblemPage';
+import { NotFoundPage } from './pages/NotFoundPage';
 import { AdminUserManagement } from './components/AdminUserManagement';
 import { Dashboard as UserProfile } from './components/Dashboard';
 import { ProtectedRoute, GuestRoute, AdminRoute, SetterOrAdminRoute } from './components/Guards';
@@ -78,7 +79,7 @@ const AppRoutes = () => {
 
           {/* Root & Fallback Redirects */}
           <Route path="/" element={<RootRedirect />} />
-          <Route path="*" element={<RootRedirect />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </ErrorBoundary>
     </Layout>

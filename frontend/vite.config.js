@@ -6,12 +6,5 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 3000,
-    proxy: {
-      '/register': 'http://localhost:5000',
-      '/login': 'http://localhost:5000',
-      '/profile': 'http://localhost:5000',
-      '/admin': 'http://localhost:5000',
-      '/problems': 'http://localhost:5000',
-    },
   },
 })
