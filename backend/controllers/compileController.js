@@ -9,7 +9,7 @@ async function runCode(req, res) {
   try {
     const { source_code, input, language } = req.body;
 
-    if (!source_code || typeof source_code !== 'string') {
+    if (!source_code || typeof source_code !== 'string' || !source_code.trim()) {
       return res.status(400).json({ error: 'source_code is required' });
     }
 

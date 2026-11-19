@@ -26,7 +26,7 @@ async function createSubmission(req, res) {
     const { source_code } = req.body;
     const language = req.body.language || 'cpp';
 
-    if (!problemId || !source_code || typeof source_code !== 'string') {
+    if (!problemId || !source_code || typeof source_code !== 'string' || !source_code.trim()) {
       return res.status(400).json({ error: 'problem_id and source_code are required' });
     }
 
